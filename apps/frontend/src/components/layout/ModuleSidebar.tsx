@@ -1,0 +1,441 @@
+// apps/frontend/src/components/layout/ModuleSidebar.tsx
+import { useState, useRef, useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
+import { 
+  ChevronLeft, Plus, LayoutDashboard, FileText, 
+  Package, Users, ShoppingCart, Receipt, Building2,
+  Warehouse, TrendingUp, CreditCard, Calendar,
+  FileStack, Settings as SettingsIcon, BookOpen,
+  FileEdit, List, BarChart3, Wallet, Truck, RotateCcw,
+  ChevronDown, Check, Search, ChevronsUpDown, ChevronsDownUp 
+} from 'lucide-react';
+
+// Type pour les entreprises
+interface Company {
+  id: string;
+  name: string;
+  initials: string;
+  color: string;
+  notifications?: number;
+}
+
+// Type pour les items du menu
+interface MenuItem {
+  name: string;
+  path: string;
+  icon: any;
+  hasAdd?: boolean;
+  section?: string;
+}
+
+// Type pour les menus par module
+interface ModuleMenus {
+  [key: string]: MenuItem[];
+}
+
+const moduleMenus: ModuleMenus = {
+  facturation: [
+    { name: 'Tableau de bord', path: '/app/facturation', icon: LayoutDashboard },
+    { name: 'Devis', path: '/app/facturation/devis', icon: FileText, hasAdd: true },
+    { name: 'Factures', path: '/app/facturation/factures', icon: FileText, hasAdd: true },
+    { name: 'Articles', path: '/app/facturation/articles', icon: Package, hasAdd: true },
+    { name: 'Factures d\'achat', path: '/app/facturation/achats', icon: ShoppingCart, hasAdd: true },
+    { name: 'Note de frais', path: '/app/facturation/frais', icon: Receipt, hasAdd: true },
+  ],
+  partenaires: [
+    { name: 'Tableau de bord', path: '/app/partenaires', icon: LayoutDashboard },
+    { name: 'Clients', path: '/app/partenaires/clients', icon: Users, hasAdd: true },
+    { name: 'Fournisseurs', path: '/app/partenaires/fournisseurs', icon: Building2, hasAdd: true },
+    { name: 'Factures client', path: '/app/partenaires/factures', icon: FileText, hasAdd: true },
+    { name: 'Factures d\'achat', path: '/app/partenaires/achats', icon: FileText, hasAdd: true },
+  ],
+  inventaire: [
+    { name: 'Tableau de bord', path: '/app/inventaire', icon: LayoutDashboard },
+    { name: 'Stock actuel', path: '/app/inventaire/stock', icon: Package, hasAdd: true },
+    { name: 'Emplacement', path: '/app/inventaire/emplacements', icon: Warehouse, hasAdd: true },
+    { name: 'Inventaire', path: '/app/inventaire/inventaire', icon: FileStack, hasAdd: true },
+    { name: 'Ajustement', path: '/app/inventaire/ajustement', icon: SettingsIcon, hasAdd: true },
+    { name: 'Transfert', path: '/app/inventaire/transfert', icon: TrendingUp, hasAdd: true },
+    { name: 'Documents', path: '/app/inventaire/documents', icon: FileStack, hasAdd: true },
+  ],
+  comptabilite: [
+    { name: 'Tableau de bord', path: '/app/comptabilite', icon: LayoutDashboard },
+    { name: 'Journaux', path: '/app/comptabilite/journaux', icon: BookOpen, hasAdd: true },
+    { name: 'Écritures', path: '/app/comptabilite/ecritures', icon: FileEdit, hasAdd: true },
+    { name: 'Plan comptable', path: '/app/comptabilite/plan', icon: List, hasAdd: true },
+    { name: 'États', path: '/app/comptabilite/etats', icon: BarChart3, hasAdd: true },
+    { name: 'Trésorerie', path: '/app/comptabilite/tresorerie', icon: Wallet, hasAdd: true },
+    { name: 'Paramètres', path: '/app/comptabilite/parametres', icon: SettingsIcon, hasAdd: true },
+  ],
+  documents: [
+    { name: 'Tableau de bord', path: '/app/documents', icon: LayoutDashboard },
+    { name: 'Devis', path: '/app/documents/devis', icon: FileText, hasAdd: true, section: 'VENTES' },
+    { name: 'Commandes', path: '/app/documents/commandes', icon: ShoppingCart, hasAdd: true },
+    { name: 'Factures', path: '/app/documents/factures', icon: Receipt, hasAdd: true },
+    { name: 'Bon de livraison', path: '/app/documents/livraison', icon: Truck, hasAdd: true },
+    { name: 'Avoirs', path: '/app/documents/avoirs', icon: RotateCcw, hasAdd: true },
+    { name: 'Expédition', path: '/app/documents/expedition', icon: Package, hasAdd: true },
+  ],
+  parametre: [
+    { name: 'Profil', path: '/app/parametre/profil', icon: Users },
+    { name: 'Entreprise', path: '/app/parametre/entreprise', icon: Building2 },
+    { name: 'Utilisateurs', path: '/app/parametre/utilisateurs', icon: Users, hasAdd: true },
+    { name: 'Paramètres', path: '/app/parametre/settings', icon: SettingsIcon },
+  ],
+};
+
+const moduleColors: { [key: string]: string } = {
+  facturation: 'purple',
+  partenaires: 'blue',
+  inventaire: 'orange',
+  comptabilite: 'teal',
+  documents: 'blue',
+  parametre: 'gray',
+};
+
+interface ModuleSidebarProps {
+  companyName: string;
+  moduleId: string;
+  companies?: Company[];
+  selectedCompanyId?: string;
+  onCompanyChange?: (companyId: string) => void;
+  onAddItem?: (itemName: string, itemPath: string) => void;
+  onAddCompany?: () => void;
+}
+
+export default function ModuleSidebar({ 
+  companyName, 
+  moduleId, 
+  companies = [],
+  selectedCompanyId,
+  onCompanyChange,
+  onAddItem,
+  onAddCompany
+}: ModuleSidebarProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const menuItems = moduleMenus[moduleId] || moduleMenus.facturation;
+  const color = moduleColors[moduleId] || 'purple';
+  
+  // Créer une entreprise par défaut si la liste est vide
+  const defaultCompany: Company = {
+    id: 'default',
+    name: companyName,
+    initials: companyName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase(),
+    color: '#9333ea', // purple-600
+    notifications: 0
+  };
+  
+  const companiesList = companies.length > 0 ? companies : [defaultCompany];
+  const selectedCompany = companiesList.find(c => c.id === selectedCompanyId) || companiesList[0];
+
+  // Fermer le dropdown quand on clique à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowCompanyDropdown(false);
+        setSearchTerm('');
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Classes Tailwind pour les couleurs
+  const getColorClasses = (color: string) => {
+    const classes: { [key: string]: { bg: string; text: string; border: string; buttonBg: string; buttonHover: string } } = {
+      purple: {
+        bg: 'bg-purple-50',
+        text: 'text-purple-700',
+        border: 'border-purple-600',
+        buttonBg: 'bg-purple-600',
+        buttonHover: 'hover:bg-purple-700'
+      },
+      blue: {
+        bg: 'bg-blue-50',
+        text: 'text-blue-700',
+        border: 'border-blue-600',
+        buttonBg: 'bg-blue-600',
+        buttonHover: 'hover:bg-blue-700'
+      },
+      orange: {
+        bg: 'bg-orange-50',
+        text: 'text-orange-700',
+        border: 'border-orange-600',
+        buttonBg: 'bg-orange-600',
+        buttonHover: 'hover:bg-orange-700'
+      },
+      teal: {
+        bg: 'bg-teal-50',
+        text: 'text-teal-700',
+        border: 'border-teal-600',
+        buttonBg: 'bg-teal-600',
+        buttonHover: 'hover:bg-teal-700'
+      },
+      gray: {
+        bg: 'bg-gray-50',
+        text: 'text-gray-700',
+        border: 'border-gray-600',
+        buttonBg: 'bg-gray-600',
+        buttonHover: 'hover:bg-gray-700'
+      },
+    };
+    return classes[color] || classes.purple;
+  };
+
+  const colorClasses = getColorClasses(color);
+
+  const handleCompanySelect = (company: Company) => {
+    setShowCompanyDropdown(false);
+    setSearchTerm('');
+    onCompanyChange?.(company.id);
+  };
+
+  const handleAddCompany = () => {
+    setShowCompanyDropdown(false);
+    setSearchTerm('');
+    onAddCompany?.();
+  };
+
+  const filteredCompanies = companiesList.filter(company =>
+    company.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-gray-200 transition-all duration-300 flex flex-col`}>
+      {/* Company Header avec Dropdown */}
+      <div className="px-1 py-1 border-b border-gray-200" ref={dropdownRef}>
+        {!isCollapsed ? (
+          <div className="relative border border-gray-200 rounded-lg shadow-sm" style={{background:"#f0f8ff"}}>
+            {/* Toujours afficher le bouton avec dropdown */}
+            <button
+              onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
+              className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              {/* Avatar avec initiales */}
+              <div 
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0 relative"
+                style={{ background: selectedCompany.color }}
+              >
+                {selectedCompany.initials}
+                {(selectedCompany.notifications || 0) > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium shadow-sm">
+                    {selectedCompany.notifications}
+                  </span>
+                )}
+              </div>
+              
+              <div className="flex-1 text-left min-w-0">
+                <h2 className="font-semibold text-gray-800 truncate text-lg">
+                  {selectedCompany.name}
+                </h2>
+              </div>
+              
+              {/* Toggle icon basé sur l'état du dropdown */}
+              {showCompanyDropdown ? (
+                <ChevronsDownUp size={20} className="text-gray-500 flex-shrink-0" />
+              ) : (
+                <ChevronsUpDown size={20} className="text-gray-700 flex-shrink-0" />
+              )}
+            </button>
+
+            {/* Dropdown Menu - Toujours affichable */}
+            {showCompanyDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-[100] overflow-hidden">
+                {/* Search Bar - Afficher seulement si plusieurs entreprises */}
+                {companiesList.length > 3 && (
+                  <div className="p-3 border-b border-gray-100">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Rechercher..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Company List - Afficher seulement si plusieurs entreprises */}
+                {companiesList.length > 1 && (
+                  <div className="max-h-64 overflow-y-auto">
+                    {filteredCompanies.length > 0 ? (
+                      filteredCompanies.map((company) => (
+                        <button
+                          key={company.id}
+                          onClick={() => handleCompanySelect(company)}
+                          className={`w-full flex items-center gap-3 p-3 transition-colors ${
+                            selectedCompany.id === company.id 
+                              ? 'bg-blue-50' 
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div 
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0 relative"
+                            style={{ background: company.color }}
+                          >
+                            {company.initials}
+                            {(company.notifications || 0) > 0 && (
+                              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                                {company.notifications}
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 text-left min-w-0">
+                            <p className="font-medium text-gray-800 truncate text-sm">
+                              {company.name}
+                            </p>
+                          </div>
+                          
+                          {selectedCompany.id === company.id && (
+                            <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-gray-500 text-sm">
+                        Aucune entreprise trouvée
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Add New Company - TOUJOURS affiché */}
+                <div className={`${companiesList.length > 1 ? 'border-t border-gray-100' : ''} p-2`}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddCompany();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Ajouter une organisation
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Mode collapsed */
+          <div className="relative group">
+            <button
+              onClick={() => setIsCollapsed(false)}
+              className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-sm mx-auto relative hover:ring-2 hover:ring-offset-2 hover:ring-gray-300 transition-all"
+              style={{ background: selectedCompany.color }}
+            >
+              {selectedCompany.initials}
+              {(selectedCompany.notifications || 0) > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                  {selectedCompany.notifications}
+                </span>
+              )}
+            </button>
+            
+            {/* Tooltip */}
+            <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+              {selectedCompany.name}
+              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Toggle Button */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className={`mx-4 my-2 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg text-sm flex items-center gap-2 transition-colors ${
+          isCollapsed ? 'justify-center' : ''
+        }`}
+      >
+        <ChevronLeft className={`w-5 h-5 font-medium text-gray-700 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
+        {!isCollapsed && <span className='font-medium text-gray-700'>Réduire</span>}
+      </button>
+
+      {/* Menu Items */}
+      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+        {menuItems.map((item, index) => {
+          const Icon = item.icon;
+          const hasAddButton = item.hasAdd === true;
+          
+          return (
+            <div key={index}>
+              {/* Section Header */}
+              {!isCollapsed && item.section && index > 0 && (
+                <div className="px-4 py-2 mt-4 text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  {item.section}
+                </div>
+              )}
+              
+              <div className="relative group">
+                <NavLink
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all relative ${
+                      isActive
+                        ? `${colorClasses.bg} ${colorClasses.text} font-medium`
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    } ${isCollapsed ? 'justify-center' : ''}`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {/* Active Indicator Bar */}
+                      {isActive && !isCollapsed && (
+                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${colorClasses.buttonBg} rounded-r-full`}></div>
+                      )}
+                      
+                      <Icon className="w-5 h-5 flex-shrink-0" />
+                      
+                      {!isCollapsed && <span className="flex-1 font-medium">{item.name}</span>}
+                      
+                      {/* Add Button */}
+                      {hasAddButton && !isCollapsed && (
+                        <button
+                          className={`p-1 ${colorClasses.buttonBg} ${colorClasses.buttonHover} text-white rounded-md opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-95`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onAddItem?.(item.name, item.path);
+                          }}
+                          title={`Ajouter ${item.name}`}
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      
+                      {/* Tooltip pour mode collapsed */}
+                      {isCollapsed && (
+                        <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                          {item.name}
+                          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </NavLink>
+              </div>
+            </div>
+          );
+        })}
+      </nav>
+
+      {/* Upgrade Button */}
+      {!isCollapsed && (
+        <div className="p-4 border-t border-gray-200">
+          <button className="w-full px-4 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-gray-900 rounded-lg font-medium hover:shadow-lg hover:scale-105 transition-all active:scale-95">
+            ✨ Passer au plan supérieur
+          </button>
+        </div>
+      )}
+    </aside>
+  );
+}
