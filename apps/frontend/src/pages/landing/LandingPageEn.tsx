@@ -1,13 +1,11 @@
 import { Check, ArrowRight, Package, Users, FileText, DollarSign, Calendar, TrendingUp, BarChart3, Shield, Zap, Menu, X, Star, Globe, ChevronRight, Sparkles, Activity } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [currency, setCurrency] = useState<'EUR' | 'USD' | 'MGA'>('EUR');
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
-  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -18,116 +16,116 @@ export default function LandingPage() {
   const features = [
     { 
       icon: Package, 
-      title: 'Gestion de Stock', 
-      desc: 'Suivi en temps réel avec alertes automatiques et notifications de stock bas',
+      title: 'Inventory Management', 
+      desc: 'Real-time stock tracking with automatic alerts and low-stock notifications',
       color: 'from-blue-500 to-blue-600',
       gradient: 'bg-gradient-to-br from-blue-50 to-blue-100'
     },
     { 
       icon: Users, 
-      title: 'CRM & Fournisseurs', 
-      desc: 'Centralisez vos contacts et l\'historique des transactions dans un tableau de bord puissant',
+      title: 'CRM & Suppliers', 
+      desc: 'Centralize your contacts and transaction history in one powerful dashboard',
       color: 'from-green-500 to-green-600',
       gradient: 'bg-gradient-to-br from-green-50 to-green-100'
     },
     { 
       icon: FileText, 
-      title: 'Facturation Intelligente', 
-      desc: 'Créez des factures professionnelles en quelques secondes avec des modèles personnalisables',
+      title: 'Smart Invoicing', 
+      desc: 'Create professional invoices in seconds with customizable templates',
       color: 'from-purple-500 to-purple-600',
       gradient: 'bg-gradient-to-br from-purple-50 to-purple-100'
     },
     { 
       icon: DollarSign, 
-      title: 'Analyses Financières', 
-      desc: 'Surveillez vos finances avec des tableaux de bord intuitifs et des analyses détaillées',
+      title: 'Financial Analytics', 
+      desc: 'Monitor your finances with intuitive dashboards and detailed insights',
       color: 'from-yellow-500 to-yellow-600',
       gradient: 'bg-gradient-to-br from-yellow-50 to-yellow-100'
     },
     { 
       icon: Calendar, 
-      title: 'Gestion de Paie', 
-      desc: 'Automatisez le calcul des salaires et le traitement des charges sociales',
+      title: 'Payroll Management', 
+      desc: 'Automate salary calculations and social charges processing',
       color: 'from-red-500 to-red-600',
       gradient: 'bg-gradient-to-br from-red-50 to-red-100'
     },
     { 
       icon: TrendingUp, 
-      title: 'Rapports & Analytics', 
-      desc: 'Analysez les performances avec des graphiques détaillés et de l\'intelligence d\'affaires',
+      title: 'Reports & Analytics', 
+      desc: 'Analyze performance with detailed charts and business intelligence',
       color: 'from-indigo-500 to-indigo-600',
       gradient: 'bg-gradient-to-br from-indigo-50 to-indigo-100'
     },
   ];
 
   const stats = [
-    { number: '50K+', label: 'Utilisateurs Actifs', icon: Users },
-    { number: '1M+', label: 'Factures Générées', icon: FileText },
-    { number: '99.9%', label: 'Disponibilité', icon: Activity },
-    { number: '150+', label: 'Pays', icon: Globe }
+    { number: '50K+', label: 'Active Users', icon: Users },
+    { number: '1M+', label: 'Invoices Generated', icon: FileText },
+    { number: '99.9%', label: 'Uptime', icon: Activity },
+    { number: '150+', label: 'Countries', icon: Globe }
   ];
 
   const plans = [
     {
       name: 'Starter',
-      subtitle: 'Parfait pour les petites équipes',
+      subtitle: 'Perfect for small teams',
       price: {
         EUR: { monthly: '7', yearly: '71' },
         USD: { monthly: '8', yearly: '78' },
         MGA: { monthly: '35000', yearly: '350000' }
       },
       features: [
-        'Jusqu\'à 5 utilisateurs',
-        'Factures illimitées',
-        'Rapports basiques',
-        'Support email',
-        'Accès application mobile',
-        '5Go de stockage'
+        'Up to 5 users',
+        'Unlimited invoices',
+        'Basic reports',
+        'Email support',
+        'Mobile app access',
+        '5GB storage'
       ],
-      cta: 'Essai Gratuit',
+      cta: 'Start Free Trial',
       highlight: false
     },
     {
       name: 'Professional',
-      subtitle: 'Pour entreprises en croissance',
+      subtitle: 'For growing businesses',
       price: {
         EUR: { monthly: '19', yearly: '194' },
         USD: { monthly: '21', yearly: '211' },
         MGA: { monthly: '95000', yearly: '950000' }
       },
       features: [
-        'Jusqu\'à 25 utilisateurs',
-        'Analyses avancées',
-        'Support prioritaire',
-        'Personnalisation',
-        'Accès API',
-        '50Go de stockage',
-        'Multi-devises',
-        'Workflows automatisés'
+        'Up to 25 users',
+        'Advanced analytics',
+        'Priority support',
+        'Custom branding',
+        'API access',
+        '50GB storage',
+        'Multi-currency',
+        'Automated workflows'
       ],
-      cta: 'Essai Gratuit',
+      cta: 'Start Free Trial',
       highlight: true,
-      badge: 'Le Plus Populaire'
+      badge: 'Most Popular'
     },
     {
       name: 'Enterprise',
-      subtitle: 'Solutions sur mesure',
+      subtitle: 'Custom solutions',
       price: {
-        EUR: { monthly: 'Sur Devis', yearly: 'Sur Devis' },
-        USD: { monthly: 'Sur Devis', yearly: 'Sur Devis' },
-        MGA: { monthly: 'Sur Devis', yearly: 'Sur Devis' }
+        EUR: { monthly: 'Custom', yearly: 'Custom' },
+        USD: { monthly: 'Custom', yearly: 'Custom' },
+        MGA: { monthly: 'Custom', yearly: 'Custom' }
       },
       features: [
-        'Utilisateurs illimités',
-        'Infrastructure dédiée',
-        'Support 24/7 téléphonique',
-        'Développement personnalisé',
-        'Formation sur site',
-        'Stockage illimité',
-        'Garantie SLA',
-        'Option marque blanche'
+        'Unlimited users',
+        'Dedicated infrastructure',
+        '24/7 phone support',
+        'Custom development',
+        'On-site training',
+        'Unlimited storage',
+        'SLA guarantee',
+        'White-label option'
       ],
-      cta: 'Contacter les Ventes',
+      cta: 'Contact Sales',
       highlight: false
     }
   ];
@@ -141,31 +139,31 @@ export default function LandingPage() {
   const testimonials = [
     {
       name: 'Sarah Johnson',
-      role: 'PDG, TechStart Inc',
+      role: 'CEO, TechStart Inc',
       location: 'San Francisco, USA',
-      text: 'Cette plateforme a transformé notre façon de gérer nos affaires. Les fonctionnalités d\'automatisation nous font gagner 15 heures par semaine !',
+      text: 'This platform transformed how we manage our business. The automation features alone save us 15 hours per week!',
       rating: 5
     },
     {
       name: 'Marcus Chen',
-      role: 'Directeur Financier',
-      location: 'Singapour',
-      text: 'La meilleure solution de gestion que nous ayons essayée. Intuitive, puissante, et l\'équipe de support est exceptionnelle.',
+      role: 'Finance Director',
+      location: 'Singapore',
+      text: 'Best business management solution we\'ve tried. Intuitive, powerful, and the support team is outstanding.',
       rating: 5
     },
     {
       name: 'Elena Rodriguez',
-      role: 'Responsable des Opérations',
-      location: 'Barcelone, Espagne',
-      text: 'Enfin un outil qui fait tout ce dont nous avons besoin. Le retour sur investissement était clair dès le premier mois.',
+      role: 'Operations Manager',
+      location: 'Barcelona, Spain',
+      text: 'Finally, a tool that does everything we need. The ROI was clear within the first month.',
       rating: 5
     }
   ];
 
   const benefits = [
-    { icon: Zap, title: 'Rapide et Efficace', desc: 'Interface optimisée' },
-    { icon: Shield, title: 'Sécurisé', desc: 'Données cryptées' },
-    { icon: BarChart3, title: 'Évolutif', desc: 'Grandit avec vous' },
+    { icon: Zap, title: 'Fast & Efficient', desc: 'Optimized interface' },
+    { icon: Shield, title: 'Secure', desc: 'Encrypted data' },
+    { icon: BarChart3, title: 'Scalable', desc: 'Grows with you' },
   ];
 
   return (
@@ -183,31 +181,25 @@ export default function LandingPage() {
 
             <nav className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
-                Fonctionnalités
+                Features
               </a>
               <a href="#pricing" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
-                Tarifs
+                Pricing
               </a>
               <a href="#testimonials" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
-                Témoignages
+                Testimonials
               </a>
               <a href="#" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
-                Ressources
+                Resources
               </a>
             </nav>
 
             <div className="hidden md:flex items-center gap-3">
-              <button className="px-5 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors" onClick={(e) => {
-                              navigate(`/login`);
-                            }}>
-                Connexion
+              <button className="px-5 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors">
+                Sign In
               </button>
-              <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-500/30 transition-all hover:shadow-xl hover:shadow-blue-500/40 hover:scale-105"
-                  onClick={(e) => {
-                    navigate(`/app/facturation`);
-                  }}
-              >
-                Essai Gratuit
+              <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-500/30 transition-all hover:shadow-xl hover:shadow-blue-500/40 hover:scale-105">
+                Start Free Trial
               </button>
             </div>
 
@@ -223,20 +215,20 @@ export default function LandingPage() {
             <div className="md:hidden py-4 border-t animate-fade-in">
               <nav className="flex flex-col gap-4">
                 <a href="#features" className="text-gray-600 hover:text-blue-600 font-medium" onClick={() => setMobileMenuOpen(false)}>
-                  Fonctionnalités
+                  Features
                 </a>
                 <a href="#pricing" className="text-gray-600 hover:text-blue-600 font-medium" onClick={() => setMobileMenuOpen(false)}>
-                  Tarifs
+                  Pricing
                 </a>
                 <a href="#testimonials" className="text-gray-600 hover:text-blue-600 font-medium" onClick={() => setMobileMenuOpen(false)}>
-                  Témoignages
+                  Testimonials
                 </a>
                 <div className="flex flex-col gap-2 pt-2 border-t">
                   <button className="px-4 py-2 text-center text-gray-700 hover:bg-gray-50 rounded-lg font-medium">
-                    Connexion
+                    Sign In
                   </button>
                   <button className="px-4 py-2 text-center bg-blue-600 text-white rounded-lg font-medium">
-                    Essai Gratuit
+                    Start Free Trial
                   </button>
                 </div>
               </nav>
@@ -258,28 +250,28 @@ export default function LandingPage() {
           <div className="max-w-7xl">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold mb-6">
               <Sparkles className="w-4 h-4" />
-              Approuvé par 50 000+ entreprises dans le monde
+              Trusted by 50,000+ businesses worldwide
             </div>
             
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-              Gestion d'Entreprise
+              Business Management
               <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mt-2">
-                Simplifiée
+                Made Simple
               </span>
             </h1>
             
             <p className="text-xl text-gray-600 mb-10 leading-relaxed max-w-3xl">
-              Plateforme tout-en-un pour la facturation, l'inventaire, la comptabilité et l'analyse. 
-              <span className="font-semibold text-gray-900"> Automatisez vos workflows</span> et concentrez-vous sur la croissance.
+              All-in-one platform for invoicing, inventory, accounting, and analytics. 
+              <span className="font-semibold text-gray-900"> Automate your workflows</span> and focus on growth.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <button className="group inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-xl text-lg font-semibold hover:bg-blue-700 shadow-2xl shadow-blue-500/40 transition-all hover:scale-105">
-                Commencer Gratuitement
+                Start Free Trial
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
               <button className="inline-flex items-center gap-2 px-8 py-4 bg-white text-gray-700 rounded-xl text-lg font-semibold hover:bg-gray-50 border-2 border-gray-200 transition-all">
-                Voir la Démo
+                Watch Demo
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
@@ -287,15 +279,15 @@ export default function LandingPage() {
             <p className="text-sm text-gray-500 flex items-center gap-4 flex-wrap mb-16">
               <span className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-green-600" />
-                Sans carte bancaire
+                No credit card required
               </span>
               <span className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-green-600" />
-                14 jours d'essai gratuit
+                14-day free trial
               </span>
               <span className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-green-600" />
-                Annulation à tout moment
+                Cancel anytime
               </span>
             </p>
 
@@ -320,8 +312,8 @@ export default function LandingPage() {
                         <TrendingUp className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <p className="text-xs text-gray-600">Revenu</p>
-                        <p className="text-lg font-bold text-gray-900">128 450 €</p>
+                        <p className="text-xs text-gray-600">Revenue</p>
+                        <p className="text-lg font-bold text-gray-900">$128,450</p>
                       </div>
                     </div>
                     <div className="text-green-600 text-sm font-semibold">+12%</div>
@@ -331,14 +323,14 @@ export default function LandingPage() {
                     <div className="p-3 bg-green-50 rounded-lg">
                       <div className="flex items-center gap-2 mb-1">
                         <FileText className="w-4 h-4 text-green-600" />
-                        <p className="text-xs text-gray-600">Factures</p>
+                        <p className="text-xs text-gray-600">Invoices</p>
                       </div>
                       <p className="text-xl font-bold text-gray-900">247</p>
                     </div>
                     <div className="p-3 bg-purple-50 rounded-lg">
                       <div className="flex items-center gap-2 mb-1">
                         <Package className="w-4 h-4 text-purple-600" />
-                        <p className="text-xs text-gray-600">Produits</p>
+                        <p className="text-xs text-gray-600">Products</p>
                       </div>
                       <p className="text-xl font-bold text-gray-900">1,523</p>
                     </div>
@@ -363,7 +355,7 @@ export default function LandingPage() {
                       <Check className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Nouvelle Commande</p>
+                      <p className="text-xs text-gray-500">New Order</p>
                       <p className="font-semibold text-gray-900">#12847</p>
                     </div>
                   </div>
@@ -372,17 +364,17 @@ export default function LandingPage() {
                 <div className="bg-white rounded-xl shadow-xl p-4 animate-float animation-delay-2000">
                   <div className="flex items-center gap-2 mb-2">
                     <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                    <p className="text-sm font-medium">Facture Envoyée !</p>
+                    <p className="text-sm font-medium">Invoice Sent!</p>
                   </div>
-                  <p className="text-xs text-gray-500">Client : Acme Corp</p>
+                  <p className="text-xs text-gray-500">Client: Acme Corp</p>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-xl p-4 animate-float animation-delay-4000">
                   <div className="flex items-center gap-2 mb-2">
                     <Activity className="w-4 h-4 text-blue-600" />
-                    <p className="text-sm font-medium">Stock Mis à Jour</p>
+                    <p className="text-sm font-medium">Stock Updated</p>
                   </div>
-                  <p className="text-xs text-gray-500">+250 articles ajoutés</p>
+                  <p className="text-xs text-gray-500">+250 items added</p>
                 </div>
               </div>
             </div>
@@ -412,13 +404,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 lg:px-8">
           <div className="text-center mb-20">
             <div className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold mb-4">
-              Tout ce dont vous avez besoin
+              Everything You Need
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Fonctionnalités Puissantes pour l'Entreprise Moderne
+              Powerful Features for Modern Business
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Rationalisez vos opérations avec notre suite complète d'outils de gestion d'entreprise
+              Streamline operations with our comprehensive suite of business management tools
             </p>
           </div>
 
@@ -441,7 +433,7 @@ export default function LandingPage() {
                     {feature.desc}
                   </p>
                   <div className="mt-4 flex items-center text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                    En savoir plus
+                    Learn more
                     <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
@@ -458,13 +450,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 lg:px-8 relative z-10">
           <div className="text-center mb-12">
             <div className="inline-block px-4 py-2 bg-white/10 backdrop-blur-sm text-white rounded-full text-sm font-semibold mb-4">
-              Tarification Simple et Transparente
+              Simple, Transparent Pricing
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Choisissez Votre Plan Idéal
+              Choose Your Perfect Plan
             </h2>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Tous les plans incluent 14 jours d'essai gratuit. Aucune carte bancaire requise.
+              All plans include 14-day free trial. No credit card required.
             </p>
           </div>
 
@@ -495,7 +487,7 @@ export default function LandingPage() {
                     : 'text-white hover:bg-white/10'
                 }`}
               >
-                Mensuel
+                Monthly
               </button>
               <button
                 onClick={() => setBillingPeriod('yearly')}
@@ -505,7 +497,7 @@ export default function LandingPage() {
                     : 'text-white hover:bg-white/10'
                 }`}
               >
-                Annuel
+                Yearly
                 <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
                   -17%
                 </span>
@@ -516,7 +508,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {plans.map((plan, index) => {
               const currentPrice = plan.price[currency][billingPeriod];
-              const isCustom = currentPrice === 'Sur Devis';
+              const isCustom = currentPrice === 'Custom';
               
               return (
                 <div 
@@ -550,7 +542,7 @@ export default function LandingPage() {
                         <div className="flex items-baseline gap-1 mb-1">
                           <span className="text-5xl font-bold">
                             {currency === 'MGA' 
-                              ? parseInt(currentPrice).toLocaleString('fr-FR')
+                              ? parseInt(currentPrice).toLocaleString('en-US')
                               : currentPrice}
                           </span>
                           <span className={plan.highlight ? 'text-gray-600' : 'text-gray-400'}>
@@ -558,11 +550,11 @@ export default function LandingPage() {
                           </span>
                         </div>
                         <p className={`text-sm ${plan.highlight ? 'text-gray-600' : 'text-gray-400'}`}>
-                          par {billingPeriod === 'monthly' ? 'mois' : 'an'}
+                          per {billingPeriod === 'monthly' ? 'month' : 'year'}
                         </p>
                         {billingPeriod === 'yearly' && !isCustom && (
                           <p className="text-xs text-green-600 font-semibold mt-2">
-                            💰 Économisez 17% avec le plan annuel
+                            💰 Save 17% with yearly plan
                           </p>
                         )}
                       </div>
@@ -595,7 +587,7 @@ export default function LandingPage() {
           </div>
 
           <p className="text-center text-gray-400 mt-12">
-            Tous les plans incluent les mises à jour gratuites • Annulation à tout moment • Garantie satisfait ou remboursé
+            All plans include free updates • Cancel anytime • Money-back guarantee
           </p>
         </div>
       </section>
@@ -605,13 +597,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 lg:px-8">
           <div className="text-center mb-16">
             <div className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold mb-4">
-              Approuvé par des Milliers
+              Loved by Thousands
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Ce Que Disent Nos Clients
+              What Our Customers Say
             </h2>
             <p className="text-xl text-gray-600">
-              Rejoignez des milliers d'entreprises satisfaites dans le monde entier
+              Join thousands of satisfied businesses worldwide
             </p>
           </div>
 
@@ -655,22 +647,22 @@ export default function LandingPage() {
         
         <div className="max-w-4xl mx-auto px-4 lg:px-8 text-center relative z-10">
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Prêt à Transformer Votre Entreprise ?
+            Ready to Transform Your Business?
           </h2>
           <p className="text-xl mb-10 opacity-95">
-            Rejoignez 50 000+ entreprises qui utilisent déjà notre plateforme pour optimiser leurs opérations
+            Join 50,000+ businesses already using our platform to streamline their operations
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button className="group inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-600 rounded-xl text-lg font-semibold hover:bg-gray-100 shadow-2xl transition-all hover:scale-105">
-              Commencer l'Essai Gratuit
+              Start Your Free Trial
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
             <button className="inline-flex items-center gap-2 px-8 py-4 bg-white/10 text-white rounded-xl text-lg font-semibold hover:bg-white/20 border-2 border-white/30 transition-all backdrop-blur-sm">
-              Planifier une Démo
+              Schedule a Demo
             </button>
           </div>
           <p className="mt-6 text-blue-100 text-sm">
-            Sans carte bancaire • 14 jours d'essai gratuit • Annulation à tout moment
+            No credit card required • 14-day free trial • Cancel anytime
           </p>
         </div>
       </section>
@@ -684,8 +676,8 @@ export default function LandingPage() {
                 <img src="/public/logo.PNG" alt="Logo" className="h-10" />
               </div>
               <p className="text-gray-400 mb-6 max-w-md leading-relaxed">
-                La solution complète de gestion d'entreprise pour les entreprises modernes. 
-                Rationalisez vos opérations, automatisez les workflows et évoluez en toute confiance.
+                The complete business management solution for modern enterprises. 
+                Streamline operations, automate workflows, and scale with confidence.
               </p>
               <div className="flex gap-4">
                 <a href="#" className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors">
@@ -701,11 +693,11 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h4 className="font-semibold mb-4 text-lg">Produit</h4>
+              <h4 className="font-semibold mb-4 text-lg">Product</h4>
               <ul className="space-y-3 text-gray-400">
-                <li><a href="#features" className="hover:text-white transition-colors">Fonctionnalités</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">Tarifs</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Intégrations</a></li>
+                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Integrations</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">API</a></li>
               </ul>
             </div>
@@ -713,21 +705,21 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold mb-4 text-lg">Support</h4>
               <ul className="space-y-3 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Centre d'aide</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Nous contacter</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Statut</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Confidentialité</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Status</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Privacy</a></li>
               </ul>
             </div>
           </div>
 
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-400 text-sm">
-              © 2024 Factura. Tous droits réservés.
+              © 2024 Factura. All rights reserved.
             </p>
             <div className="flex items-center gap-6 text-sm text-gray-400">
-              <a href="#" className="hover:text-white transition-colors">Conditions</a>
-              <a href="#" className="hover:text-white transition-colors">Confidentialité</a>
+              <a href="#" className="hover:text-white transition-colors">Terms</a>
+              <a href="#" className="hover:text-white transition-colors">Privacy</a>
               <a href="#" className="hover:text-white transition-colors">Cookies</a>
             </div>
           </div>

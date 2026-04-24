@@ -6,27 +6,53 @@ import api from '../../services/api';
 
 // Composant StatCard
 function StatCard({ title, value, icon: Icon, color = 'purple' }: any) {
-  const gradients: any = {
-    purple: 'from-purple-500 to-purple-600',
-    blue: 'from-blue-500 to-blue-600',
-    green: 'from-green-500 to-green-600',
-    orange: 'from-orange-500 to-orange-600',
+  const colors: any = {
+    purple: {
+      bg: 'bg-purple-50',
+      border: 'border-purple-200',
+      text: 'text-purple-700',
+      iconBg: 'bg-purple-100',
+      iconColor: 'text-purple-600'
+    },
+    blue: {
+      bg: 'bg-blue-50',
+      border: 'border-blue-200',
+      text: 'text-blue-700',
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-blue-600'
+    },
+    green: {
+      bg: 'bg-green-50',
+      border: 'border-green-200',
+      text: 'text-green-700',
+      iconBg: 'bg-green-100',
+      iconColor: 'text-green-600'
+    },
+    orange: {
+      bg: 'bg-orange-50',
+      border: 'border-orange-200',
+      text: 'text-orange-700',
+      iconBg: 'bg-orange-100',
+      iconColor: 'text-orange-600'
+    },
   };
 
+  const theme = colors[color];
+
   return (
-    <div className={`bg-gradient-to-br ${gradients[color]} rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow`}>
+    <div className={`${theme.bg} ${theme.border} border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <p className="text-white/80 text-sm font-medium uppercase tracking-wide mb-2">
+          <p className={`text-sm font-medium uppercase tracking-wide mb-2 ${theme.text} opacity-70`}>
             {title}
           </p>
-          <p className="text-3xl font-bold">
+          <p className={`text-2xl font-bold ${theme.text}`}>
             {value}
           </p>
         </div>
         
-        <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-          <Icon className="w-8 h-8" />
+        <div className={`${theme.iconBg} ${theme.iconColor} p-3 rounded-xl`}>
+          <Icon className="w-6 h-6" />
         </div>
       </div>
     </div>

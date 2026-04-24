@@ -6,10 +6,23 @@ import {
   Package, Users, ShoppingCart, Receipt, Building2,
   Warehouse, TrendingUp, CreditCard, Calendar,
   FileStack, Settings as SettingsIcon, BookOpen,
-  FileEdit, List, BarChart3, Wallet, Truck, RotateCcw,
-  ChevronDown, Check, Search, ChevronsUpDown, ChevronsDownUp, PanelLeft,
-  Globe, HelpCircle, Download, Gift, Info, LogOut, ChevronRight, Star
-} from 'lucide-react';
+  FileEdit, List, BarChart3, Wallet, Truck, RotateCcw, ChevronRight, LogOut,
+  ChevronDown, Check, Search, ChevronsUpDown, ChevronsDownUp, PanelLeft, Globe, HelpCircle, Star, Info, Settings, Download,
+  User, Shield, Bell, MessagesSquare, Palette,
+  FileSignature, Inbox, Mail, Clock, Archive, Trash2,
+  Repeat, AlertCircle, CheckCircle, AlertTriangle, 
+  
+  ClipboardList,
+  ArrowRightLeft,
+  Send,
+  RefreshCw,
+  ShoppingBag,
+  Boxes,
+  MapPin,
+  FileSpreadsheet } from 'lucide-react';
+
+import { getModuleColor, moduleThemes } from '../shared/moduleThemes';
+import type { ModuleKey } from '../shared/moduleThemes';
 
 // Type pour les entreprises
 interface Company {
@@ -26,6 +39,7 @@ interface MenuItem {
   path: string;
   icon: any;
   hasAdd?: boolean;
+  exact?: boolean;
   section?: string;
 }
 
@@ -36,52 +50,83 @@ interface ModuleMenus {
 
 const moduleMenus: ModuleMenus = {
   facturation: [
-    { name: 'Tableau de bord', path: '/app/facturation', icon: LayoutDashboard },
-    { name: 'Devis', path: '/app/facturation/devis', icon: FileText, hasAdd: true },
-    { name: 'Factures', path: '/app/facturation/factures', icon: FileText, hasAdd: true },
+    { name: 'Tableau de bord', path: '/app/facturation', icon: LayoutDashboard, exact: true },
+    { name: 'Devis', path: '/app/facturation/devis', icon: FileSignature, hasAdd: true },
+    { name: 'Factures', path: '/app/facturation/factures', icon: Receipt, hasAdd: true },
+    { name: 'Récurrentes', path: '/app/facturation/recurrentes', icon: Repeat, hasAdd: true },
     { name: 'Articles', path: '/app/facturation/articles', icon: Package, hasAdd: true },
-    { name: 'Factures d\'achat', path: '/app/facturation/achats', icon: ShoppingCart, hasAdd: true },
-    { name: 'Note de frais', path: '/app/facturation/frais', icon: Receipt, hasAdd: true },
+    { name: 'Factures d\'achat', path: '/app/facturation/achats', icon: ShoppingBag, hasAdd: true },
+    { name: 'Note de frais', path: '/app/facturation/frais', icon: CreditCard, hasAdd: true },
   ],
   partenaires: [
-    { name: 'Tableau de bord', path: '/app/partenaires', icon: LayoutDashboard },
+    { name: 'Tableau de bord', path: '/app/partenaires', icon: LayoutDashboard, exact: true },
     { name: 'Clients', path: '/app/partenaires/clients', icon: Users, hasAdd: true },
     { name: 'Fournisseurs', path: '/app/partenaires/fournisseurs', icon: Building2, hasAdd: true },
-    { name: 'Factures client', path: '/app/partenaires/factures', icon: FileText, hasAdd: true },
-    { name: 'Factures d\'achat', path: '/app/partenaires/achats', icon: FileText, hasAdd: true },
+    { name: 'Factures client', path: '/app/partenaires/factures', icon: Receipt, hasAdd: true },
+    { name: 'Factures d\'achat', path: '/app/partenaires/achats', icon: ShoppingBag, hasAdd: true },
   ],
   inventaire: [
-    { name: 'Tableau de bord', path: '/app/inventaire', icon: LayoutDashboard },
-    { name: 'Stock actuel', path: '/app/inventaire/stock', icon: Package, hasAdd: true },
-    { name: 'Emplacement', path: '/app/inventaire/emplacements', icon: Warehouse, hasAdd: true },
-    { name: 'Inventaire', path: '/app/inventaire/inventaire', icon: FileStack, hasAdd: true },
-    { name: 'Ajustement', path: '/app/inventaire/ajustement', icon: SettingsIcon, hasAdd: true },
-    { name: 'Transfert', path: '/app/inventaire/transfert', icon: TrendingUp, hasAdd: true },
+    { name: 'Tableau de bord', path: '/app/inventaire', icon: LayoutDashboard, exact: true },
+    { name: 'Stock actuel', path: '/app/inventaire/stock', icon: Boxes, hasAdd: true },
+    { name: 'Emplacement', path: '/app/inventaire/emplacements', icon: MapPin, hasAdd: true },
+    { name: 'Inventaire', path: '/app/inventaire/inventaire', icon: ClipboardList, hasAdd: true },
+    { name: 'Ajustement', path: '/app/inventaire/ajustement', icon: Settings, hasAdd: true },
+    { name: 'Transfert', path: '/app/inventaire/transfert', icon: ArrowRightLeft, hasAdd: true },
     { name: 'Documents', path: '/app/inventaire/documents', icon: FileStack, hasAdd: true },
   ],
   comptabilite: [
-    { name: 'Tableau de bord', path: '/app/comptabilite', icon: LayoutDashboard },
+    { name: 'Tableau de bord', path: '/app/comptabilite', icon: LayoutDashboard, exact: true },
     { name: 'Journaux', path: '/app/comptabilite/journaux', icon: BookOpen, hasAdd: true },
     { name: 'Écritures', path: '/app/comptabilite/ecritures', icon: FileEdit, hasAdd: true },
     { name: 'Plan comptable', path: '/app/comptabilite/plan', icon: List, hasAdd: true },
-    { name: 'États', path: '/app/comptabilite/etats', icon: BarChart3, hasAdd: true },
+    { name: 'États', path: '/app/comptabilite/etats', icon: FileSpreadsheet, hasAdd: true },
     { name: 'Trésorerie', path: '/app/comptabilite/tresorerie', icon: Wallet, hasAdd: true },
-    { name: 'Paramètres', path: '/app/comptabilite/parametres', icon: SettingsIcon, hasAdd: true },
+    { name: 'Paramètres', path: '/app/comptabilite/parametres', icon: Settings, hasAdd: true },
   ],
   documents: [
-    { name: 'Tableau de bord', path: '/app/documents', icon: LayoutDashboard },
-    { name: 'Devis', path: '/app/documents/devis', icon: FileText, hasAdd: true, section: 'VENTES' },
+    { name: 'Tableau de bord', path: '/app/documents', icon: LayoutDashboard, exact: true },
+    { name: 'Devis', path: '/app/documents/devis', icon: FileSignature, hasAdd: true, section: 'VENTES' },
     { name: 'Commandes', path: '/app/documents/commandes', icon: ShoppingCart, hasAdd: true },
     { name: 'Factures', path: '/app/documents/factures', icon: Receipt, hasAdd: true },
     { name: 'Bon de livraison', path: '/app/documents/livraison', icon: Truck, hasAdd: true },
-    { name: 'Avoirs', path: '/app/documents/avoirs', icon: RotateCcw, hasAdd: true },
-    { name: 'Expédition', path: '/app/documents/expedition', icon: Package, hasAdd: true },
+    { name: 'Avoirs', path: '/app/documents/avoirs', icon: RefreshCw, hasAdd: true },
+    { name: 'Expédition', path: '/app/documents/expedition', icon: Send, hasAdd: true },
   ],
   parametre: [
-    { name: 'Profil', path: '/app/parametre/profil', icon: Users },
+    { name: 'Mon Profil', path: '/app/parametre', icon: User, exact: true },
     { name: 'Entreprise', path: '/app/parametre/entreprise', icon: Building2 },
     { name: 'Utilisateurs', path: '/app/parametre/utilisateurs', icon: Users, hasAdd: true },
-    { name: 'Paramètres', path: '/app/parametre/settings', icon: SettingsIcon },
+    { name: 'Permissions', path: '/app/parametre/permissions', icon: Shield, hasAdd: true },
+    { name: 'Abonnement', path: '/app/parametre/abonnement', icon: CreditCard, hasAdd: true },
+    { name: 'Notifications', path: '/app/parametre/notifications', icon: Bell },
+    { name: 'Messages', path: '/app/parametre/messages', icon: MessagesSquare },
+    { name: 'Sécurité', path: '/app/parametre/securite', icon: Shield },
+    { name: 'Apparence', path: '/app/parametre/theme', icon: Palette },
+    { name: 'Langue', path: '/app/parametre/langue', icon: Globe },
+    // { name: 'Paramètres', path: '/app/parametre/settings', icon: Settings },
+  ],
+   // Nouveau : Messages
+  messages: [
+    { name: 'Tableau de bord', path: '/app/messages', icon: LayoutDashboard, exact: true },
+    { name: 'Boîte de réception', path: '/app/messages/inbox', icon: Inbox, section: 'MESSAGES' },
+    { name: 'Non lus', path: '/app/messages/unread', icon: Mail },
+    { name: 'Importants', path: '/app/messages/starred', icon: Star },
+    { name: 'Envoyés', path: '/app/messages/sent', icon: Send },
+    { name: 'Brouillons', path: '/app/messages/drafts', icon: Clock },
+    { name: 'Archivés', path: '/app/messages/archived', icon: Archive },
+    { name: 'Corbeille', path: '/app/messages/trash', icon: Trash2 },
+  ],
+
+  // Nouveau : Notifications
+  notifications: [
+    { name: 'Tableau de bord', path: '/app/notifications', icon: LayoutDashboard, exact: true },
+    { name: 'Toutes', path: '/app/notifications/all', icon: Bell, section: 'NOTIFICATIONS' },
+    { name: 'Non lues', path: '/app/notifications/unread', icon: AlertCircle },
+    { name: 'Succès', path: '/app/notifications/success', icon: CheckCircle },
+    { name: 'Avertissements', path: '/app/notifications/warnings', icon: AlertTriangle },
+    { name: 'Erreurs', path: '/app/notifications/errors', icon: AlertCircle },
+    { name: 'Informations', path: '/app/notifications/info', icon: Info },
+    { name: 'Archivées', path: '/app/notifications/archived', icon: Archive },
   ],
 };
 
@@ -96,7 +141,7 @@ const moduleColors: { [key: string]: string } = {
 
 interface ModuleSidebarProps {
   companyName: string;
-  moduleId: string;
+  moduleId: ModuleKey;
   companies?: Company[];
   selectedCompanyId?: string;
   onCompanyChange?: (companyId: string) => void;
@@ -128,11 +173,12 @@ export default function ModuleSidebar({
   const userMenuRef = useRef<HTMLDivElement>(null);
   
   const menuItems = moduleMenus[moduleId] || moduleMenus.facturation;
-  const color = moduleColors[moduleId] || 'purple';
+  // const color = moduleColors[moduleId] || 'purple';
+  const color = getModuleColor(moduleId); // Retourne 'purple', 'blue', etc.
   
   // Menu items pour le popup utilisateur
   const userMenuItems = [
-    { icon: SettingsIcon, label: 'Paramètres', shortcut: '⌘+Ctrl+,', hasArrow: false, isSpecial: false, url: '/app/parametre/settings' },
+    { icon: SettingsIcon, label: 'Paramètres', shortcut: '⌘+Ctrl+,', hasArrow: false, isSpecial: false, url: '/app/parametre/profil' },
     { icon: Globe, label: 'Langue', hasArrow: true, isSpecial: false, url: '/app/parametre/langue' },
     { icon: HelpCircle, label: "Obtenir de l'aide", hasArrow: false, isSpecial: false, url: '/app/aide' },
     { icon: Star, label: "Mettre à niveau l'abonnement", hasArrow: false, isSpecial: true, url: '/app/upgrade' },
@@ -413,6 +459,7 @@ export default function ModuleSidebar({
                 <div className="relative group">
                   <NavLink
                     to={item.path}
+                    end={item.exact}
                     className={({ isActive }) =>
                       `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all relative ${
                         isActive

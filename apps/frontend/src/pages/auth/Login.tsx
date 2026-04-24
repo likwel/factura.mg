@@ -27,8 +27,10 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-blue-100">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary-600 mb-2">Factura.mg</h1>
+        <div className="flex flex-col items-center text-center mb-6">
+          <img src="/public/logo.PNG" alt="Logo" className="h-12 mb-5" onClick={(e) => {
+              navigate(`/`);
+            }}/>
           <p className="text-gray-600">Connexion à votre compte</p>
         </div>
 

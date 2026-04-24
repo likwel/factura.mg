@@ -6,6 +6,7 @@ import { SocketProvider } from './contexts/SocketContext';
 
 // Pages publiques
 import LandingPage from './pages/landing/LandingPage';
+import LandingPageEn from './pages/landing/LandingPageEn';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 
@@ -34,6 +35,8 @@ import InvoicesPage from './pages/InvoicesPage';
 import ArticlesPage from './pages/ArticlesPage';
 import ArticleForm from './pages/form/ArticleForm';
 import PartnerForm from './pages/form/PartnerForm';
+import MessagesDashboard from './pages/modules/MessagesDashboard';
+import NotificationsDashboard from './pages/modules/NotificationsDashboard';
 
 
 export default function App() {
@@ -45,6 +48,7 @@ export default function App() {
           <Routes>
             {/* Pages publiques */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/en" element={<LandingPageEn />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             
@@ -55,11 +59,15 @@ export default function App() {
               <Route path="/dashboard" element={<Navigate to="/app/facturation" replace />} />
               <Route path="/app" element={<Navigate to="/app/facturation" replace />} />
               
+              <Route path="/app/messages" element={<MessagesDashboard />} />
+              <Route path="/app/notifications" element={<NotificationsDashboard />} />
+
               <Route path="/app/article" element={<ArticlesPage />} />
               <Route path="/app/article/new" element={<ArticleForm />} />
               {/* MODULE FACTURATION - VIOLET */}
               <Route path="/app/facturation" element={<FacturationDashboard />} />
               <Route path="/app/facturation/devis" element={<div className="p-6">Page Devis (à créer)</div>} />
+              <Route path="/app/facturation/recurrentes" element={<div className="p-6">Page Recurrents (à créer)</div>} />
               <Route path="/app/facturation/factures" element={<InvoicesPage />} />
               <Route path="/app/facturation/articles" element={<ArticlesPage />} />
               <Route path="/app/facturation/articles/new" element={<ArticleForm />} />
@@ -101,11 +109,15 @@ export default function App() {
               <Route path="/app/documents/expedition" element={<div className="p-6">Page Expédition (à créer)</div>} />
               
               {/* MODULE PARAMÈTRE - GRIS */}
-              <Route path="/app/parametre" element={<ParametreDashboard />} />
-              <Route path="/app/parametre/profil" element={<ParametreDashboard />} />
-              <Route path="/app/parametre/entreprise" element={<ParametreDashboard />} />
-              <Route path="/app/parametre/utilisateurs" element={<ParametreDashboard />} />
-              <Route path="/app/parametre/settings" element={<ParametreDashboard />} />
+              <Route path="/app/parametre" element={<ParametreDashboard id='profil' />} />
+              <Route path="/app/parametre/profil" element={<ParametreDashboard id='profil' />} />
+              <Route path="/app/parametre/entreprise" element={<ParametreDashboard id='entreprise' />} />
+              <Route path="/app/parametre/utilisateurs" element={<ParametreDashboard id='utilisateurs' />} />
+              <Route path="/app/parametre/securite" element={<ParametreDashboard id='securite' />} />
+              <Route path="/app/parametre/permissions" element={<ParametreDashboard id='permissions' />} />
+              <Route path="/app/parametre/abonnement" element={<ParametreDashboard id='abonnement' />} />
+              <Route path="/app/parametre/theme" element={<ParametreDashboard id='theme' />} />
+              <Route path="/app/parametre/notifications" element={<ParametreDashboard id='notifications' />} />
               
             </Route>
 
