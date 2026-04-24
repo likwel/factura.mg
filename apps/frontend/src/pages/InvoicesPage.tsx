@@ -1,93 +1,58 @@
-// apps/frontend/src/pages/Invoices.tsx
 import { DataTable, Column, TableAction, BulkAction } from '../components/common/DataTable';
-import { Trash2, Download, Eye, Edit, Send } from 'lucide-react';
+import { Trash2, Download, Eye, Edit, Send, AlertCircle, Loader2 } from 'lucide-react';
+import { useInvoices, STATUS_FILTERS, STATUS_LABELS } from '../hooks/useInvoices';
+import { Invoice } from '../services/invoice.service';
+import { useNavigate } from 'react-router-dom';
 
-// Type pour les factures
-interface Invoice {
-  id: string;
+// Type étendu pour le DataTable (inclut les champs transformés)
+type InvoiceRow = Invoice & {
   reference: string;
-  partner: {
-    name: string;
-    initials: string;
-    color: string;
-  };
-  status: 'Validé' | 'En cours' | 'Brouillon';
-  total: number;
-  createdAt: string;
-  updatedAt: string;
-}
+  statusLabel: string;
+  partner: { name: string; initials: string; color: string };
+};
 
-// Données de démo
-const mockInvoices: Invoice[] = [
-  {
-    id: '1',
-    reference: 'FAC0005',
-    partner: { name: 'MGBI', initials: 'M', color: 'bg-blue-600' },
-    status: 'Validé',
-    total: 1070000,
-    createdAt: '20/01/2026',
-    updatedAt: '20/01/2026',
-  },
-  {
-    id: '2',
-    reference: 'FAC0004',
-    partner: { name: 'MGBI', initials: 'M', color: 'bg-blue-600' },
-    status: 'En cours',
-    total: 260000,
-    createdAt: '23/10/2025',
-    updatedAt: '23/10/2025',
-  },
-  {
-    id: '3',
-    reference: 'FAC0003',
-    partner: { name: 'MGBI', initials: 'M', color: 'bg-blue-600' },
-    status: 'En cours',
-    total: 520000,
-    createdAt: '23/10/2025',
-    updatedAt: '23/10/2025',
-  },
-  {
-    id: '4',
-    reference: 'FAC0002',
-    partner: { name: 'MGBI', initials: 'M', color: 'bg-blue-600' },
-    status: 'Validé',
-    total: 780000,
-    createdAt: '23/10/2025',
-    updatedAt: '23/10/2025',
-  },
-  {
-    id: '5',
-    reference: 'FAC0001',
-    partner: { name: 'MGBI', initials: 'M', color: 'bg-blue-600' },
-    status: 'En cours',
-    total: 1040000,
-    createdAt: '23/10/2025',
-    updatedAt: '23/10/2025',
-  },
-];
+const STATUS_STYLES: Record<Invoice['status'], string> = {
+  PAID:      'bg-green-100 text-green-700',
+  PENDING:   'bg-yellow-100 text-yellow-700',
+  DRAFT:     'bg-gray-100 text-gray-600',
+  OVERDUE:   'bg-red-100 text-red-700',
+  CANCELLED: 'bg-red-50 text-red-400 line-through',
+};
 
 export default function InvoicesPage() {
-  // Définir les colonnes
-  const columns: Column<Invoice>[] = [
+  const navigate = useNavigate();
+  const {
+    tableData,
+    loading,
+    error,
+    currentPage,
+    totalPages,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+    setSearch,
+    setStatusFilter,
+    setDateRange,
+    refresh,
+    handleDelete,
+    handleBulkDelete,
+    handleExport,
+  } = useInvoices();
+
+  const columns: Column<InvoiceRow>[] = [
     {
       key: 'reference',
       header: 'RÉFÉRENCE',
       width: '150px',
       render: (value) => (
-        <span className={`font-semibold ${
-          value.startsWith('FAC000') && (value.endsWith('5') || value.endsWith('2'))
-            ? 'text-green-600' 
-            : 'text-blue-600'
-        }`}>
-          {value}
-        </span>
+        <span className="font-semibold text-blue-600">{value}</span>
       ),
     },
     {
       key: 'partner',
       header: 'PARTENAIRE',
       width: '200px',
-      render: (partner: Invoice['partner']) => (
+      render: (partner: InvoiceRow['partner']) => (
         <div className="flex items-center gap-2">
           <div className={`${partner.color} w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm`}>
             {partner.initials}
@@ -100,18 +65,11 @@ export default function InvoicesPage() {
       key: 'status',
       header: 'STATUT',
       width: '150px',
-      render: (status: Invoice['status']) => {
-        const statusConfig = {
-          'Validé': 'bg-green-100 text-green-700',
-          'En cours': 'bg-yellow-100 text-yellow-700',
-          'Brouillon': 'bg-gray-100 text-gray-700',
-        };
-        return (
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusConfig[status]}`}>
-            {status}
-          </span>
-        );
-      },
+      render: (status: Invoice['status']) => (
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_STYLES[status]}`}>
+          {STATUS_LABELS[status]}
+        </span>
+      ),
     },
     {
       key: 'total',
@@ -119,7 +77,7 @@ export default function InvoicesPage() {
       width: '180px',
       render: (value: number) => (
         <span className="font-semibold">
-          {value.toLocaleString('fr-FR')} Ar
+          {Number(value).toLocaleString('fr-FR')} Ar
         </span>
       ),
     },
@@ -135,84 +93,85 @@ export default function InvoicesPage() {
     },
   ];
 
-  // Actions par ligne
-  const rowActions: TableAction<Invoice>[] = [
+  const rowActions: TableAction<InvoiceRow>[] = [
     {
       label: 'Voir',
       icon: <Eye className="w-4 h-4" />,
-      onClick: (invoice) => console.log('Voir:', invoice),
+      onClick: (invoice) => navigate(`/invoices/${invoice.id}`),
     },
     {
       label: 'Modifier',
       icon: <Edit className="w-4 h-4" />,
-      onClick: (invoice) => console.log('Modifier:', invoice),
+      onClick: (invoice) => navigate(`/invoices/${invoice.id}/edit`),
     },
     {
       label: 'Envoyer',
       icon: <Send className="w-4 h-4" />,
-      onClick: (invoice) => console.log('Envoyer:', invoice),
+      onClick: (invoice) => console.log('Envoyer:', invoice.id),
+      // Désactivé si déjà payé ou annulé
     },
     {
       label: 'Supprimer',
       icon: <Trash2 className="w-4 h-4" />,
-      onClick: (invoice) => console.log('Supprimer:', invoice),
+      onClick: (invoice) => handleDelete(invoice.id),
       variant: 'danger',
     },
   ];
 
-  // Actions groupées
-  const bulkActions: BulkAction<Invoice>[] = [
+  const bulkActions: BulkAction<InvoiceRow>[] = [
     {
       label: 'Exporter',
       icon: <Download className="w-4 h-4" />,
-      onClick: (invoices) => console.log('Exporter:', invoices),
+      onClick: handleExport,
     },
     {
       label: 'Supprimer',
       icon: <Trash2 className="w-4 h-4" />,
-      onClick: (invoices) => console.log('Supprimer:', invoices),
+      onClick: handleBulkDelete,
       variant: 'danger',
     },
-  ];
-
-  // Filtres
-  const filters = [
-    { label: 'Tous', value: 'all' },
-    { label: 'Validé', value: 'validated' },
-    { label: 'En cours', value: 'in_progress' },
-    { label: 'Brouillon', value: 'draft' },
   ];
 
   return (
     <div className="h-screen">
+      {/* Bandeau d'erreur non bloquant */}
+      {error && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 text-sm border-b border-red-200">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
       <DataTable
-        title="Facture client"
-        description="Gérer votre facturation client"
+        title="Factures"
+        description="Gérez vos factures simplement"
         createLabel="Créer facture"
-        onCreateClick={() => console.log('Créer une facture')}
-        onRefresh={() => console.log('Actualiser')}
-        
-        data={mockInvoices}
+        onCreateClick={() => navigate('/invoices/new')}
+        onRefresh={refresh}
+
+        data={tableData as InvoiceRow[]}
         columns={columns}
-        
+        loading={loading}
+
         selectable
         bulkActions={bulkActions}
         rowActions={rowActions}
-        
-        searchPlaceholder="Rechercher un document"
-        onSearch={(query) => console.log('Rechercher:', query)}
-        
+
+        searchPlaceholder="Référence, client..."
+        onSearch={setSearch}
+
         showDateFilter
-        onDateFilter={(dates) => console.log('Filtrer dates:', dates)}
-        
-        filters={filters}
-        onFilterChange={(filter) => console.log('Filtre:', filter)}
-        
-        currentPage={1}
-        totalPages={5}
-        pageSize={10}
-        onPageChange={(page) => console.log('Page:', page)}
-        onPageSizeChange={(size) => console.log('Taille page:', size)}
+        onDateFilter={(dates) => setDateRange({ from: dates?.start ? dates.start.toISOString() : undefined,
+  to: dates?.end ? dates.end.toISOString() : undefined, })}
+
+        filters={STATUS_FILTERS}
+        onFilterChange={(f) => setStatusFilter(f)}
+
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
       />
     </div>
   );

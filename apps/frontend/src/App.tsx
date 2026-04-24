@@ -33,6 +33,8 @@ import ParametreDashboard from './pages/modules/ParametreDashboard';
 import InvoicesPage from './pages/InvoicesPage';
 import ArticlesPage from './pages/ArticlesPage';
 import ArticleForm from './pages/form/ArticleForm';
+import PartnerForm from './pages/form/PartnerForm';
+
 
 export default function App() {
   return (
@@ -60,11 +62,13 @@ export default function App() {
               <Route path="/app/facturation/devis" element={<div className="p-6">Page Devis (à créer)</div>} />
               <Route path="/app/facturation/factures" element={<InvoicesPage />} />
               <Route path="/app/facturation/articles" element={<ArticlesPage />} />
+              <Route path="/app/facturation/articles/new" element={<ArticleForm />} />
               <Route path="/app/facturation/achats" element={<div className="p-6">Page Achats (à créer)</div>} />
               <Route path="/app/facturation/frais" element={<div className="p-6">Page Frais (à créer)</div>} />
               
               {/* MODULE PARTENAIRES - BLEU */}
               <Route path="/app/partenaires" element={<div className="p-6"><h1 className="text-2xl font-bold">Dashboard Partenaires</h1></div>} />
+              <Route path="/app/partenaires/new" element={<PartnerForm />} />
               <Route path="/app/partenaires/clients" element={<PartenairesDashboard />} />
               <Route path="/app/partenaires/fournisseurs" element={<div className="p-6">Page Fournisseurs (à créer)</div>} />
               

@@ -85,13 +85,13 @@ const companies: Company[] = [
 
         <main className="flex-1 overflow-y-auto">
           <div className="p-6">
-            <NotificationBanner
+            {/* <NotificationBanner
               message="Vous utilisez actuellement la version d'essai"
               expiryDate="19-04-2026"
               type="warning"
               actionLabel="Activer"
               onAction={() => console.log('Activate subscription')}
-            />
+            /> */}
             <Outlet />
           </div>
         </main>

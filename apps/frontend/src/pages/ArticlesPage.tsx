@@ -1,218 +1,191 @@
-// apps/frontend/src/pages/Invoices.tsx
 import { DataTable, Column, TableAction, BulkAction } from '../components/common/DataTable';
-import { Trash2, Download, Eye, Edit, Send } from 'lucide-react';
-
-// Type pour les factures
-interface Invoice {
-  id: string;
-  reference: string;
-  partner: {
-    name: string;
-    initials: string;
-    color: string;
-  };
-  status: 'Validé' | 'En cours' | 'Brouillon';
-  total: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Données de démo
-const mockInvoices: Invoice[] = [
-  {
-    id: '1',
-    reference: 'FAC0005',
-    partner: { name: 'MGBI', initials: 'M', color: 'bg-blue-600' },
-    status: 'Validé',
-    total: 1070000,
-    createdAt: '20/01/2026',
-    updatedAt: '20/01/2026',
-  },
-  {
-    id: '2',
-    reference: 'FAC0004',
-    partner: { name: 'MGBI', initials: 'M', color: 'bg-blue-600' },
-    status: 'En cours',
-    total: 260000,
-    createdAt: '23/10/2025',
-    updatedAt: '23/10/2025',
-  },
-  {
-    id: '3',
-    reference: 'FAC0003',
-    partner: { name: 'MGBI', initials: 'M', color: 'bg-blue-600' },
-    status: 'En cours',
-    total: 520000,
-    createdAt: '23/10/2025',
-    updatedAt: '23/10/2025',
-  },
-  {
-    id: '4',
-    reference: 'FAC0002',
-    partner: { name: 'MGBI', initials: 'M', color: 'bg-blue-600' },
-    status: 'Validé',
-    total: 780000,
-    createdAt: '23/10/2025',
-    updatedAt: '23/10/2025',
-  },
-  {
-    id: '5',
-    reference: 'FAC0001',
-    partner: { name: 'MGBI', initials: 'M', color: 'bg-blue-600' },
-    status: 'En cours',
-    total: 1040000,
-    createdAt: '23/10/2025',
-    updatedAt: '23/10/2025',
-  },
-];
+import { Trash2, Eye, Edit, AlertCircle, Package } from 'lucide-react';
+import { useArticles, ACTIVE_FILTERS, STOCK_STATUS } from '../hooks/useArticles';
+import { Article } from '../services/article.service';
+import { useNavigate } from 'react-router-dom';
 
 export default function ArticlesPage() {
-  // Définir les colonnes
-  const columns: Column<Invoice>[] = [
+  const navigate = useNavigate();
+  const {
+    articles,
+    loading,
+    error,
+    currentPage,
+    totalPages,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+    setSearch,
+    setActiveFilter,
+    refresh,
+    handleDelete,
+  } = useArticles();
+
+  const columns: Column<Article>[] = [
     {
-      key: 'reference',
-      header: 'RÉFÉRENCE',
-      width: '150px',
+      key: 'code',
+      header: 'CODE',
+      width: '120px',
       render: (value) => (
-        <span className={`font-semibold ${
-          value.startsWith('FAC000') && (value.endsWith('5') || value.endsWith('2'))
-            ? 'text-green-600' 
-            : 'text-blue-600'
-        }`}>
-          {value}
-        </span>
+        <span className="font-mono text-sm font-semibold text-gray-700">{value}</span>
       ),
     },
     {
-      key: 'partner',
-      header: 'PARTENAIRE',
-      width: '200px',
-      render: (partner: Invoice['partner']) => (
+      key: 'name',
+      header: 'ARTICLE',
+      width: '220px',
+      render: (value, row) => (
         <div className="flex items-center gap-2">
-          <div className={`${partner.color} w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm`}>
-            {partner.initials}
+          {row.image ? (
+            <img src={row.image} className="w-8 h-8 rounded object-cover" />
+          ) : (
+            <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center">
+              <Package className="w-4 h-4 text-gray-400" />
+            </div>
+          )}
+          <div>
+            <p className="font-medium text-sm">{value}</p>
+            {row.category && (
+              <p className="text-xs text-gray-400">{row.category.name}</p>
+            )}
           </div>
-          <span className="font-medium">{partner.name}</span>
         </div>
       ),
     },
     {
-      key: 'status',
-      header: 'STATUT',
-      width: '150px',
-      render: (status: Invoice['status']) => {
-        const statusConfig = {
-          'Validé': 'bg-green-100 text-green-700',
-          'En cours': 'bg-yellow-100 text-yellow-700',
-          'Brouillon': 'bg-gray-100 text-gray-700',
+      key: 'currentStock',
+      header: 'STOCK',
+      width: '130px',
+      render: (value, row) => {
+        const status = STOCK_STATUS(row);
+        const styles = {
+          ok:  'text-green-700 bg-green-50',
+          low: 'text-yellow-700 bg-yellow-50',
+          out: 'text-red-700 bg-red-50',
         };
+        const labels = { ok: 'En stock', low: 'Stock bas', out: 'Rupture' };
         return (
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusConfig[status]}`}>
-            {status}
-          </span>
+          <div className="flex flex-col gap-0.5">
+            <span className="font-semibold text-sm">
+              {value} {row.unit ?? 'unité(s)'}
+            </span>
+            <span className={`text-xs px-2 py-0.5 rounded-full w-fit font-medium ${styles[status]}`}>
+              {labels[status]}
+            </span>
+          </div>
         );
       },
     },
     {
-      key: 'total',
-      header: 'TOTAL',
-      width: '180px',
-      render: (value: number) => (
-        <span className="font-semibold">
-          {value.toLocaleString('fr-FR')} Ar
+      key: 'purchasePrice',
+      header: "PRIX D'ACHAT",
+      width: '150px',
+      render: (value) => (
+        <span className="text-sm">{Number(value).toLocaleString('fr-FR')} Ar</span>
+      ),
+    },
+    {
+      key: 'sellingPrice',
+      header: 'PRIX DE VENTE',
+      width: '150px',
+      render: (value) => (
+        <span className="font-semibold text-sm">{Number(value).toLocaleString('fr-FR')} Ar</span>
+      ),
+    },
+    {
+      key: 'supplier',
+      header: 'FOURNISSEUR',
+      width: '160px',
+      render: (supplier) =>
+        supplier ? (
+          <span className="text-sm text-gray-600">{supplier.name}</span>
+        ) : (
+          <span className="text-xs text-gray-300 italic">—</span>
+        ),
+    },
+    {
+      key: 'isActive',
+      header: 'STATUT',
+      width: '110px',
+      render: (value) => (
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+          value ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+        }`}>
+          {value ? 'Actif' : 'Inactif'}
         </span>
       ),
     },
     {
       key: 'createdAt',
       header: 'CRÉÉ LE',
-      width: '150px',
-    },
-    {
-      key: 'updatedAt',
-      header: 'MODIFIÉ LE',
-      width: '150px',
+      width: '130px',
+      render: (value) => new Date(value).toLocaleDateString('fr-FR'),
     },
   ];
 
-  // Actions par ligne
-  const rowActions: TableAction<Invoice>[] = [
+  const rowActions: TableAction<Article>[] = [
     {
       label: 'Voir',
       icon: <Eye className="w-4 h-4" />,
-      onClick: (invoice) => console.log('Voir:', invoice),
+      onClick: (article) => navigate(`/articles/${article.id}`),
     },
     {
       label: 'Modifier',
       icon: <Edit className="w-4 h-4" />,
-      onClick: (invoice) => console.log('Modifier:', invoice),
-    },
-    {
-      label: 'Envoyer',
-      icon: <Send className="w-4 h-4" />,
-      onClick: (invoice) => console.log('Envoyer:', invoice),
+      onClick: (article) => navigate(`/articles/${article.id}/edit`),
     },
     {
       label: 'Supprimer',
       icon: <Trash2 className="w-4 h-4" />,
-      onClick: (invoice) => console.log('Supprimer:', invoice),
+      onClick: (article) => handleDelete(article.id),
       variant: 'danger',
     },
   ];
 
-  // Actions groupées
-  const bulkActions: BulkAction<Invoice>[] = [
-    {
-      label: 'Exporter',
-      icon: <Download className="w-4 h-4" />,
-      onClick: (invoices) => console.log('Exporter:', invoices),
-    },
+  const bulkActions: BulkAction<Article>[] = [
     {
       label: 'Supprimer',
       icon: <Trash2 className="w-4 h-4" />,
-      onClick: (invoices) => console.log('Supprimer:', invoices),
+      onClick: (items) => Promise.all(items.map((a) => handleDelete(a.id))),
       variant: 'danger',
     },
-  ];
-
-  // Filtres
-  const filters = [
-    { label: 'Tous', value: 'all' },
-    { label: 'Validé', value: 'validated' },
-    { label: 'En cours', value: 'in_progress' },
-    { label: 'Brouillon', value: 'draft' },
   ];
 
   return (
     <div className="h-screen">
+      {error && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 text-sm border-b border-red-200">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
       <DataTable
-        title="Tous les articles"
-        description="Gérer vos articles tous simplement"
-        createLabel="Créer facture"
-        onCreateClick={() => console.log('Créer une facture')}
-        onRefresh={() => console.log('Actualiser')}
-        
-        data={mockInvoices}
+        title="Articles"
+        description="Gérez votre catalogue d'articles"
+        createLabel="Nouvel article"
+        onCreateClick={() => navigate('/articles/new')}
+        onRefresh={refresh}
+
+        data={articles}
         columns={columns}
-        
+        loading={loading}
+
         selectable
         bulkActions={bulkActions}
         rowActions={rowActions}
-        
-        searchPlaceholder="Rechercher un document"
-        onSearch={(query) => console.log('Rechercher:', query)}
-        
-        showDateFilter
-        onDateFilter={(dates) => console.log('Filtrer dates:', dates)}
-        
-        filters={filters}
-        onFilterChange={(filter) => console.log('Filtre:', filter)}
-        
-        currentPage={1}
-        totalPages={5}
-        pageSize={10}
-        onPageChange={(page) => console.log('Page:', page)}
-        onPageSizeChange={(size) => console.log('Taille page:', size)}
+
+        searchPlaceholder="Code, nom, code-barre..."
+        onSearch={setSearch}
+
+        filters={ACTIVE_FILTERS}
+        onFilterChange={setActiveFilter}
+
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
       />
     </div>
   );

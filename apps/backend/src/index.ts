@@ -17,6 +17,7 @@ import invoiceRoutes from './controllers/invoices.controller';
 import stockRoutes from './controllers/stock.controller';
 import userRoutes from './controllers/users.controller';
 import dashboardRoutes from './controllers/dashboard.controller';
+import partnerRoutes from './controllers/partner.controller';
 
 // Nouvelles routes
 import supplierRoutes from './controllers/suppliers.controller';
@@ -85,6 +86,7 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api/auth', authRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/clients', clientRoutes);
+app.use('/api/partners', partnerRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/users', userRoutes);

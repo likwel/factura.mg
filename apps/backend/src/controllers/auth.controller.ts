@@ -23,7 +23,7 @@ router.post('/login', async (req, res) => {
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, companyId: user.companyId, role: user.role, permissions: user.permissions || [] },
+      { id: user.id, userId : user.id, email: user.email, companyId: user.companyId, role: user.role, permissions: user.permissions || [] },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -74,6 +74,13 @@ router.post('/register', async (req, res) => {
   } catch (error) {
     res.status(400).json({ error: 'Erreur d\'inscription' });
   }
+});
+
+router.post('/logout', async (req, res) => {
+  return res.json({
+    success: true,
+    message: 'Déconnexion réussie',
+  });
 });
 
 export default router;
