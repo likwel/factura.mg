@@ -1,7 +1,8 @@
 // pages/PartnerForm.tsx
 import React, { useState, useEffect } from 'react';
-import { Users, User, Truck, Loader2, Save, X, Trash2, AlertCircle, CheckCircle2, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
+import { Users, User, Truck, Loader2, Save, X, Trash2, AlertCircle, CheckCircle2, Mail, Phone, MapPin, CreditCard, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 enum PartnerType {
   CLIENT = 'client',
@@ -25,10 +26,10 @@ interface PartnerFormProps {
   onCancel?: () => void;
 }
 
-const PartnerForm: React.FC<PartnerFormProps> = ({ 
-  partnerId, 
-  onSuccess, 
-  onCancel 
+const PartnerForm: React.FC<PartnerFormProps> = ({
+  partnerId,
+  onSuccess,
+  onCancel
 }) => {
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -48,6 +49,8 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const typeFromUrl = searchParams.get('type') || 'client';
 
   const isEditMode = !!partnerId;
 
@@ -55,8 +58,11 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
   useEffect(() => {
     if (partnerId) {
       loadPartner();
+    } else {
+      // Mode création : utiliser le type depuis l'URL
+      setPartnerType(typeFromUrl === 'fournisseur' ? PartnerType.SUPPLIER : PartnerType.CLIENT);
     }
-  }, [partnerId]);
+  }, [partnerId, typeFromUrl]);
 
   const loadPartner = async () => {
     setLoadingData(true);
@@ -137,10 +143,10 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
     setErrorMessage('');
 
     try {
-      const url = isEditMode 
-        ? `${API_BASE_URL}/api/partners/${partnerId}` 
+      const url = isEditMode
+        ? `${API_BASE_URL}/api/partners/${partnerId}`
         : `${API_BASE_URL}/api/partners`;
-      
+
       const method = isEditMode ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -175,14 +181,14 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
       const data = await response.json();
 
       setSuccessMessage(
-        isEditMode 
-          ? 'Partenaire modifié avec succès !' 
+        isEditMode
+          ? 'Partenaire modifié avec succès !'
           : `${partnerType === PartnerType.CLIENT ? 'Client' : 'Fournisseur'} créé avec succès !`
       );
 
       toast.success(
-        isEditMode 
-          ? 'Partenaire modifié avec succès !' 
+        isEditMode
+          ? 'Partenaire modifié avec succès !'
           : `${partnerType === PartnerType.CLIENT ? 'Client' : 'Fournisseur'} créé avec succès !`
       );
 
@@ -201,14 +207,14 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
 
   const handleDelete = async () => {
     if (!partnerId) return;
-    
+
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce partenaire ?')) {
       return;
     }
 
     setLoading(true);
     setErrorMessage('');
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/partners/${partnerId}`, {
         method: 'DELETE',
@@ -230,7 +236,7 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
 
       const data = await response.json();
       setSuccessMessage(data.message || 'Partenaire supprimé avec succès !');
-      
+
       setTimeout(() => {
         onSuccess?.();
       }, 1500);
@@ -265,8 +271,8 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
               {isEditMode ? 'Modifier le Partenaire' : 'Créer un Partenaire'}
             </h2>
             <p className="text-sm text-gray-600">
-              {isEditMode 
-                ? 'Modifiez les informations du partenaire' 
+              {isEditMode
+                ? 'Modifiez les informations du partenaire'
                 : 'Ajoutez un nouveau client ou fournisseur'}
             </p>
           </div>
@@ -295,33 +301,34 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
             <div className="w-1 h-5 bg-blue-600 rounded"></div>
             Type de partenaire
           </h3>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
               onClick={() => setPartnerType(PartnerType.CLIENT)}
               disabled={loading}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                partnerType === PartnerType.CLIENT
+              className={`p-4 rounded-xl border transition-all ${partnerType === PartnerType.CLIENT
                   ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-md'
                   : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-              }`}
+                }`}
             >
-              <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-lg ${
-                  partnerType === PartnerType.CLIENT
-                    ? 'bg-gradient-to-br from-blue-500 to-blue-600'
-                    : 'bg-gray-100'
-                }`}>
-                  <User className={`w-6 h-6 ${
-                    partnerType === PartnerType.CLIENT ? 'text-white' : 'text-gray-600'
-                  }`} />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-lg ${partnerType === PartnerType.CLIENT
+                      ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+                      : 'bg-gray-100'
+                    }`}>
+                    <User className={`w-6 h-6 ${partnerType === PartnerType.CLIENT ? 'text-white' : 'text-gray-600'
+                      }`} />
+                  </div>
+                  <span className={`text-lg font-semibold ${partnerType === PartnerType.CLIENT ? 'text-blue-700' : 'text-gray-700'
+                    }`}>
+                    Client
+                  </span>
                 </div>
-                <span className={`text-lg font-semibold ${
-                  partnerType === PartnerType.CLIENT ? 'text-blue-700' : 'text-gray-700'
-                }`}>
-                  Client
-                </span>
+                {partnerType === PartnerType.CLIENT && (
+                  <Check className="w-6 h-6 text-blue-600" />
+                )}
               </div>
             </button>
 
@@ -329,27 +336,28 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
               type="button"
               onClick={() => setPartnerType(PartnerType.SUPPLIER)}
               disabled={loading}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                partnerType === PartnerType.SUPPLIER
+              className={`p-4 rounded-xl border transition-all ${partnerType === PartnerType.SUPPLIER
                   ? 'border-green-500 bg-gradient-to-r from-green-50 to-green-100 shadow-md'
                   : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
-              }`}
+                }`}
             >
-              <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-lg ${
-                  partnerType === PartnerType.SUPPLIER
-                    ? 'bg-gradient-to-br from-green-500 to-green-600'
-                    : 'bg-gray-100'
-                }`}>
-                  <Truck className={`w-6 h-6 ${
-                    partnerType === PartnerType.SUPPLIER ? 'text-white' : 'text-gray-600'
-                  }`} />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-lg ${partnerType === PartnerType.SUPPLIER
+                      ? 'bg-gradient-to-br from-green-500 to-green-600'
+                      : 'bg-gray-100'
+                    }`}>
+                    <Truck className={`w-6 h-6 ${partnerType === PartnerType.SUPPLIER ? 'text-white' : 'text-gray-600'
+                      }`} />
+                  </div>
+                  <span className={`text-lg font-semibold ${partnerType === PartnerType.SUPPLIER ? 'text-green-700' : 'text-gray-700'
+                    }`}>
+                    Fournisseur
+                  </span>
                 </div>
-                <span className={`text-lg font-semibold ${
-                  partnerType === PartnerType.SUPPLIER ? 'text-green-700' : 'text-gray-700'
-                }`}>
-                  Fournisseur
-                </span>
+                {partnerType === PartnerType.SUPPLIER && (
+                  <Check className="w-6 h-6 text-green-600" />
+                )}
               </div>
             </button>
           </div>
@@ -361,7 +369,7 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
             <div className="w-1 h-5 bg-purple-600 rounded"></div>
             Informations de base
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -371,9 +379,8 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
                 type="text"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                  errors.code ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.code ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                 placeholder="P001"
                 disabled={loading}
               />
@@ -390,9 +397,8 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                  errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                 placeholder="Nom du partenaire"
                 disabled={loading}
               />
@@ -409,7 +415,7 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
             <div className="w-1 h-5 bg-green-600 rounded"></div>
             Contact
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -420,9 +426,8 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                  errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                 placeholder="email@example.com"
                 disabled={loading}
               />
@@ -440,9 +445,8 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                  errors.phone ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.phone ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                 placeholder="+261 XX XX XXX XX"
                 disabled={loading}
               />
@@ -474,7 +478,7 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
             <div className="w-1 h-5 bg-orange-600 rounded"></div>
             Informations fiscales et crédit
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -501,9 +505,8 @@ const PartnerForm: React.FC<PartnerFormProps> = ({
                   step="0.01"
                   value={formData.creditLimit}
                   onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                    errors.creditLimit ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  }`}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.creditLimit ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
                   placeholder="0.00"
                   disabled={loading}
                 />

@@ -162,6 +162,7 @@ export default function ArticlesPage() {
 
       <DataTable
         title="Articles"
+        createButtonColor ="purple"
         description="Gérez votre catalogue d'articles"
         createLabel="Nouvel article"
         onCreateClick={() => navigate('/articles/new')}

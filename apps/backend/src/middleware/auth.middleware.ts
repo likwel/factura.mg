@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../index';
 import { Request, Response, NextFunction } from 'express';
 import { Permission } from '@factura-mg/shared';
+import { AuthUser } from '../types/express';
 
 interface JwtPayload {
   userId: string;
@@ -12,18 +13,17 @@ interface JwtPayload {
   companyId: string;
 }
 
-interface AuthUser {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  companyId: string;
-  isActive: boolean;
-  permissions?: string[] | null;
-}
+// interface AuthUser {
+//   id: string;
+//   email: string;
+//   firstName: string;
+//   lastName: string;
+//   role: string;
+//   companyId: string | null;
+//   isActive: boolean;
+//   permissions?: string[] | null;
+// }
 
-// ✅ Export de AuthRequest
 export interface AuthRequest extends Request {
   user?: AuthUser;
 }
@@ -61,9 +61,20 @@ export const authenticate = async (
         firstName: true,
         lastName: true,
         role: true,
-        companyId: true,
         isActive: true,
-        permissions: true, // ✅ récupère les permissions custom
+        defaultCompanyId: true,
+        permissions: true,
+        companyMemberships: {
+          select: {
+            companyId: true,
+            role: true,
+            permissions: true,
+            isActive: true,
+          },
+          where: {
+            isActive: true,
+          },
+        },
       },
     });
 
@@ -77,9 +88,24 @@ export const authenticate = async (
       return;
     }
 
+    const activeCompanyId = decoded.companyId ?? user.defaultCompanyId ?? null;
+    const membership = user.companyMemberships.find(
+      (m) => m.companyId === activeCompanyId
+    );
+
+    const globalPerms = Array.isArray(user.permissions) ? (user.permissions as string[]) : [];
+    const memberPerms = Array.isArray(membership?.permissions) ? (membership.permissions as string[]) : [];
+    const allPermissions = [...new Set([...globalPerms, ...memberPerms])];
+
     req.user = {
-      ...user,
-      permissions: user.permissions as string[] | null,
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role as string,
+      companyId: activeCompanyId,
+      isActive: user.isActive,
+      permissions: allPermissions,
     };
 
     next();
@@ -94,10 +120,8 @@ export const authenticate = async (
   }
 };
 
-// Rôles qui ont accès à tout (bypass des permissions)
 const SUPER_ROLES = ['SUPER_ADMIN', 'ADMIN'];
 
-// ✅ authorize accepte des Permission ou des rôles string
 export const authorize = (...permissions: (Permission | string)[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     const user = req.user;
@@ -107,13 +131,13 @@ export const authorize = (...permissions: (Permission | string)[]) => {
       return;
     }
 
-    // Les super admins / admins passent toujours
+    // Super admins passent toujours
     if (SUPER_ROLES.includes(user.role)) {
       next();
       return;
     }
 
-    // Vérifier si c'est un rôle direct (ex: 'MANAGER')
+    // Vérifier rôle direct
     const rolePermissions = permissions.filter((p) =>
       ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'EMPLOYEE', 'CLIENT'].includes(p)
     );
@@ -122,10 +146,12 @@ export const authorize = (...permissions: (Permission | string)[]) => {
       return;
     }
 
-    // Vérifier les permissions custom stockées en JSON sur l'utilisateur
+    // Vérifier permissions custom
     const userPermissions: string[] = Array.isArray(user.permissions)
       ? (user.permissions as string[])
       : [];
+      console.log(permissions);
+      
 
     const hasPermission = permissions.some((p) => userPermissions.includes(p));
 

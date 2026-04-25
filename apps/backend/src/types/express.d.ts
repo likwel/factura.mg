@@ -11,8 +11,9 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   role: string;
-  companyId: string;
+  companyId: string | null;      // ← string | null
   isActive: boolean;
+  permissions?: string[] | null; // ← ajouté
 }
 
 /**

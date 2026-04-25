@@ -1,6 +1,7 @@
 import { Check, ArrowRight, Package, Users, FileText, DollarSign, Calendar, TrendingUp, BarChart3, Shield, Zap, Menu, X, Star, Globe, ChevronRight, Sparkles, Activity } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -8,6 +9,7 @@ export default function LandingPage() {
   const [currency, setCurrency] = useState<'EUR' | 'USD' | 'MGA'>('EUR');
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const navigate = useNavigate();
+  const { user, currentCompany, currentMembership, switchCompany, logout, subscription } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -177,7 +179,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-2">
               <div className="relative">
                 <div className="absolute inset-0 bg-blue-600 opacity-50"></div>
-                <img src="/public/logo.PNG" alt="Logo" className="h-12 relative" />
+                <img src="/logo.png" alt="Logo" className="h-12 relative" />
               </div>
             </div>
 
@@ -197,19 +199,115 @@ export default function LandingPage() {
             </nav>
 
             <div className="hidden md:flex items-center gap-3">
-              <button className="px-5 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors" onClick={(e) => {
-                              navigate(`/login`);
-                            }}>
-                Connexion
-              </button>
-              <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg shadow-blue-500/30 transition-all hover:shadow-xl hover:shadow-blue-500/40 hover:scale-105"
-                  onClick={(e) => {
-                    navigate(`/app/facturation`);
-                  }}
-              >
-                Essai Gratuit
-              </button>
+  {user ? (
+    <div className="relative group">
+      {/* Trigger Button */}
+      <button className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full border border-gray-200 bg-white hover:border-blue-300 hover:shadow-md hover:shadow-blue-500/10 transition-all duration-200">
+        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-inner">
+          {(user.firstName || user.lastName || 'U')[0].toUpperCase()}
+        </div>
+        <span className="text-sm font-medium text-gray-700">
+          {user.firstName} {user.lastName}
+        </span>
+        <svg
+          className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-500 group-hover:rotate-180 transition-all duration-300"
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Dropdown Panel */}
+      <div className="absolute right-0 top-full mt-3 w-56 bg-white rounded-2xl shadow-2xl shadow-gray-200/80 border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible translate-y-1 group-hover:translate-y-0 transition-all duration-200 z-50 overflow-hidden">
+
+        {/* Header */}
+        <div className="px-4 py-3.5 bg-gradient-to-br from-blue-50 to-indigo-50 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow">
+              {(user.firstName || user.lastName || 'U')[0].toUpperCase()}
             </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-800 truncate">
+                {user.firstName} {user.lastName}
+              </p>
+              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Menu Items */}
+        <div className="p-1.5">
+          <button
+            onClick={() => navigate('/app/facturation')}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-all duration-150 group/item"
+          >
+            <span className="w-8 h-8 rounded-lg bg-gray-100 group-hover/item:bg-blue-100 flex items-center justify-center transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+              </svg>
+            </span>
+            <span className="font-medium">Dashboard</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/app/profil')}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-all duration-150 group/item"
+          >
+            <span className="w-8 h-8 rounded-lg bg-gray-100 group-hover/item:bg-blue-100 flex items-center justify-center transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </span>
+            <span className="font-medium">Mon profil</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/app/parametres')}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-all duration-150 group/item"
+          >
+            <span className="w-8 h-8 rounded-lg bg-gray-100 group-hover/item:bg-blue-100 flex items-center justify-center transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </span>
+            <span className="font-medium">Paramètres</span>
+          </button>
+        </div>
+
+        {/* Logout */}
+        <div className="p-1.5 border-t border-gray-100">
+          <button
+            onClick={logout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150 group/item"
+          >
+            <span className="w-8 h-8 rounded-lg bg-red-50 group-hover/item:bg-red-100 flex items-center justify-center transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </span>
+            <span className="font-medium">Déconnexion</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : (
+    <>
+      <button
+        className="px-5 py-2 text-gray-600 hover:text-blue-600 font-medium text-sm transition-colors"
+        onClick={() => navigate('/login')}
+      >
+        Connexion
+      </button>
+      <button
+        className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm rounded-full font-medium shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-105 transition-all duration-200"
+        onClick={() => navigate('/app/facturation')}
+      >
+        Essai Gratuit
+      </button>
+    </>
+  )}
+</div>
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -681,7 +779,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
             <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
-                <img src="/public/logo.PNG" alt="Logo" className="h-10" />
+                <img src="/logo.png" alt="Logo" className="h-10" />
               </div>
               <p className="text-gray-400 mb-6 max-w-md leading-relaxed">
                 La solution complète de gestion d'entreprise pour les entreprises modernes. 

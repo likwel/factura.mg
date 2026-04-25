@@ -23,7 +23,8 @@ import partnerRoutes from './controllers/partner.controller';
 import supplierRoutes from './controllers/suppliers.controller';
 import categoryRoutes from './controllers/categories.controller';
 import documentRoutes from './controllers/documents.controller';
-// import companyRoutes from './controllers/companies.controller';
+import companyRoutes from './routes/companies.routes';
+import subscriptionRoutes from './routes/subscription.routes';
 
 // Services
 import { setupSocketHandlers } from './services/socket';
@@ -40,7 +41,8 @@ dotenv.config();
 
 export const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' 
-    ? ['query', 'info', 'warn', 'error'] 
+    // ? ['query', 'info', 'warn', 'error'] 
+    ? ['error'] 
     : ['error'],
 });
 
@@ -85,7 +87,7 @@ if (process.env.NODE_ENV === 'development') {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/articles', articleRoutes);
-app.use('/api/clients', clientRoutes);
+// app.use('/api/clients', clientRoutes);
 app.use('/api/partners', partnerRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/stock', stockRoutes);
@@ -99,7 +101,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/documents', documentRoutes);
-// app.use('/api/companies', companyRoutes);
+app.use('/api/companies', companyRoutes);
+app.use('/api/subscription', subscriptionRoutes);
 
 // ============================================================================
 // HEALTH CHECK

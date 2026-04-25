@@ -161,8 +161,8 @@ router.get('/clients', authenticate, authorize(Permission.VIEW_PARTNERS), async 
   }
 });
 
-// GET /api/partners/suppliers - Liste uniquement les fournisseurs
-router.get('/suppliers', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
+// GET /api/partners/fournisseurs - Liste uniquement les fournisseurs
+router.get('/fournisseurs', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
   try {
     const companyId = req.user!.companyId;
 
@@ -502,6 +502,413 @@ router.delete('/:id', authenticate, authorize(Permission.DELETE_PARTNERS), async
   } catch (error) {
     console.error('Error deleting partner:', error);
     res.status(500).json({ message: 'Erreur lors de la suppression du partenaire' });
+  }
+});
+
+// Ajouter ces routes au fichier backend/src/routes/partner.routes.ts
+
+// GET /api/clients/stats - Statistiques des clients
+router.get('/clients/stats', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
+  try {
+    const companyId = req.user!.companyId;
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const firstDayOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    // Tous les clients
+    const allClients = await prisma.client.findMany({
+      where: { companyId },
+      include: {
+        debts: true,
+      },
+    });
+
+    // Clients actifs/inactifs
+    const active = allClients.filter(c => c.isActive).length;
+    const inactive = allClients.filter(c => !c.isActive).length;
+
+    // Nouveaux ce mois
+    const newThisMonth = allClients.filter(c => 
+      new Date(c.createdAt) >= firstDayOfMonth
+    ).length;
+
+    // Nouveaux le mois dernier (pour le taux de croissance)
+    const newLastMonth = allClients.filter(c => {
+      const createdDate = new Date(c.createdAt);
+      return createdDate >= firstDayOfLastMonth && createdDate <= lastDayOfLastMonth;
+    }).length;
+
+    // Taux de croissance
+    const growthRate = newLastMonth > 0 
+      ? Math.round(((newThisMonth - newLastMonth) / newLastMonth) * 100)
+      : 0;
+
+    // Crédit total
+    const totalCredit = allClients.reduce((sum, c) => 
+      sum + Number(c.creditLimit || 0), 0
+    );
+
+    // Dettes totales
+    const totalDebt = allClients.reduce((sum, c) => {
+      const clientDebt = c.debts.reduce((d, debt) => 
+        d + Number(debt.amount || 0), 0
+      );
+      return sum + clientDebt;
+    }, 0);
+
+    res.json({
+      success: true,
+      data: {
+        total: allClients.length,
+        active,
+        inactive,
+        newThisMonth,
+        totalCredit,
+        totalDebt,
+        growthRate,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching client stats:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des statistiques' });
+  }
+});
+
+// GET /api/fournisseurs/stats - Statistiques des fournisseurs
+router.get('/fournisseurs/stats', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
+  try {
+    const companyId = req.user!.companyId;
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const firstDayOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    // Tous les fournisseurs
+    const allSuppliers = await prisma.supplier.findMany({
+      where: { companyId },
+      include: {
+        debts: true,
+      },
+    });
+
+    // Fournisseurs actifs/inactifs
+    const active = allSuppliers.filter(s => s.isActive).length;
+    const inactive = allSuppliers.filter(s => !s.isActive).length;
+
+    // Nouveaux ce mois
+    const newThisMonth = allSuppliers.filter(s => 
+      new Date(s.createdAt) >= firstDayOfMonth
+    ).length;
+
+    // Nouveaux le mois dernier
+    const newLastMonth = allSuppliers.filter(s => {
+      const createdDate = new Date(s.createdAt);
+      return createdDate >= firstDayOfLastMonth && createdDate <= lastDayOfLastMonth;
+    }).length;
+
+    // Taux de croissance
+    const growthRate = newLastMonth > 0 
+      ? Math.round(((newThisMonth - newLastMonth) / newLastMonth) * 100)
+      : 0;
+
+    // Dettes totales (ce qu'on doit aux fournisseurs)
+    const totalDebt = allSuppliers.reduce((sum, s) => {
+      const supplierDebt = s.debts.reduce((d, debt) => 
+        d + Number(debt.amount || 0), 0
+      );
+      return sum + supplierDebt;
+    }, 0);
+
+    res.json({
+      success: true,
+      data: {
+        total: allSuppliers.length,
+        active,
+        inactive,
+        newThisMonth,
+        totalCredit: 0, // Pas de crédit pour les fournisseurs
+        totalDebt,
+        growthRate,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching supplier stats:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des statistiques' });
+  }
+});
+
+// GET /api/clients/top - Top clients
+router.get('/clients/top', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
+  try {
+    const companyId = req.user!.companyId;
+    const { limit = '5' } = req.query;
+    const limitNum = parseInt(limit as string);
+
+    const clients = await prisma.client.findMany({
+      where: { companyId, isActive: true },
+      include: {
+        invoices: {
+          select: {
+            total: true,
+          },
+        },
+      },
+    });
+
+    // Calculer le total des factures pour chaque client
+    const clientsWithTotal = clients.map(client => {
+      const totalAmount = client.invoices.reduce((sum, inv) => 
+        sum + Number(inv.total || 0), 0
+      );
+      return {
+        id: client.id,
+        name: client.name,
+        code: client.code,
+        totalAmount,
+        invoiceCount: client.invoices.length,
+        lastActivity: client.updatedAt.toISOString(),
+      };
+    });
+
+    // Trier par montant total décroissant
+    const topClients = clientsWithTotal
+      .sort((a, b) => b.totalAmount - a.totalAmount)
+      .slice(0, limitNum);
+
+    res.json({
+      success: true,
+      data: topClients,
+    });
+  } catch (error) {
+    console.error('Error fetching top clients:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des top clients' });
+  }
+});
+
+// GET /api/fournisseurs/top - Top fournisseurs
+router.get('/fournisseurs/top', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
+  try {
+    const companyId = req.user!.companyId;
+    const { limit = '5' } = req.query;
+    const limitNum = parseInt(limit as string);
+
+    const suppliers = await prisma.supplier.findMany({
+      where: { companyId, isActive: true },
+      include: {
+        articles: {
+          select: {
+            purchasePrice: true,
+          },
+        },
+      },
+    });
+
+    // Calculer le total basé sur les articles
+    const suppliersWithTotal = suppliers.map(supplier => {
+      const totalAmount = supplier.articles.reduce((sum, article) => 
+        sum + Number(article.purchasePrice || 0), 0
+      );
+      return {
+        id: supplier.id,
+        name: supplier.name,
+        code: supplier.code,
+        totalAmount,
+        invoiceCount: supplier.articles.length, // Nombre d'articles fournis
+        lastActivity: supplier.updatedAt.toISOString(),
+      };
+    });
+
+    // Trier par montant total décroissant
+    const topSuppliers = suppliersWithTotal
+      .sort((a, b) => b.totalAmount - a.totalAmount)
+      .slice(0, limitNum);
+
+    res.json({
+      success: true,
+      data: topSuppliers,
+    });
+  } catch (error) {
+    console.error('Error fetching top suppliers:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des top fournisseurs' });
+  }
+});
+
+// PATCH /api/clients/bulk-update - Mise à jour en masse des clients
+router.patch('/clients/bulk-update', authenticate, authorize(Permission.EDIT_PARTNERS), async (req: AuthRequest, res) => {
+  try {
+    const { ids, isActive } = req.body;
+    const companyId = req.user!.companyId;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'IDs requis' });
+    }
+
+    if (isActive === undefined) {
+      return res.status(400).json({ message: 'isActive requis' });
+    }
+
+    // Mise à jour en masse
+    const result = await prisma.client.updateMany({
+      where: {
+        id: { in: ids },
+        companyId, // Sécurité : ne mettre à jour que les clients de l'entreprise
+      },
+      data: {
+        isActive: Boolean(isActive),
+      },
+    });
+
+    res.json({
+      success: true,
+      data: { count: result.count },
+      message: `${result.count} client(s) mis à jour`,
+    });
+  } catch (error) {
+    console.error('Error bulk updating clients:', error);
+    res.status(500).json({ message: 'Erreur lors de la mise à jour en masse' });
+  }
+});
+
+// PATCH /api/fournisseurs/bulk-update - Mise à jour en masse des fournisseurs
+router.patch('/fournisseurs/bulk-update', authenticate, authorize(Permission.EDIT_PARTNERS), async (req: AuthRequest, res) => {
+  try {
+    const { ids, isActive } = req.body;
+    const companyId = req.user!.companyId;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'IDs requis' });
+    }
+
+    if (isActive === undefined) {
+      return res.status(400).json({ message: 'isActive requis' });
+    }
+
+    // Mise à jour en masse
+    const result = await prisma.supplier.updateMany({
+      where: {
+        id: { in: ids },
+        companyId,
+      },
+      data: {
+        isActive: Boolean(isActive),
+      },
+    });
+
+    res.json({
+      success: true,
+      data: { count: result.count },
+      message: `${result.count} fournisseur(s) mis à jour`,
+    });
+  } catch (error) {
+    console.error('Error bulk updating suppliers:', error);
+    res.status(500).json({ message: 'Erreur lors de la mise à jour en masse' });
+  }
+});
+
+// DELETE /api/clients/bulk-delete - Suppression en masse des clients
+router.delete('/clients/bulk-delete', authenticate, authorize(Permission.DELETE_PARTNERS), async (req: AuthRequest, res) => {
+  try {
+    const { ids } = req.body;
+    const companyId = req.user!.companyId;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'IDs requis' });
+    }
+
+    // Vérifier si les clients sont utilisés
+    const clients = await prisma.client.findMany({
+      where: {
+        id: { in: ids },
+        companyId,
+      },
+      include: {
+        invoices: { take: 1 },
+        debts: { take: 1 },
+      },
+    });
+
+    let deletedCount = 0;
+    let deactivatedCount = 0;
+
+    for (const client of clients) {
+      if (client.invoices.length > 0 || client.debts.length > 0) {
+        // Soft delete si utilisé
+        await prisma.client.update({
+          where: { id: client.id },
+          data: { isActive: false },
+        });
+        deactivatedCount++;
+      } else {
+        // Suppression complète si non utilisé
+        await prisma.client.delete({
+          where: { id: client.id },
+        });
+        deletedCount++;
+      }
+    }
+
+    res.json({
+      success: true,
+      data: { deletedCount, deactivatedCount },
+      message: `${deletedCount} client(s) supprimé(s), ${deactivatedCount} désactivé(s)`,
+    });
+  } catch (error) {
+    console.error('Error bulk deleting clients:', error);
+    res.status(500).json({ message: 'Erreur lors de la suppression en masse' });
+  }
+});
+
+// DELETE /api/fournisseurs/bulk-delete - Suppression en masse des fournisseurs
+router.delete('/fournisseurs/bulk-delete', authenticate, authorize(Permission.DELETE_PARTNERS), async (req: AuthRequest, res) => {
+  try {
+    const { ids } = req.body;
+    const companyId = req.user!.companyId;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'IDs requis' });
+    }
+
+    // Vérifier si les fournisseurs sont utilisés
+    const suppliers = await prisma.supplier.findMany({
+      where: {
+        id: { in: ids },
+        companyId,
+      },
+      include: {
+        articles: { take: 1 },
+        debts: { take: 1 },
+      },
+    });
+
+    let deletedCount = 0;
+    let deactivatedCount = 0;
+
+    for (const supplier of suppliers) {
+      if (supplier.articles.length > 0 || supplier.debts.length > 0) {
+        // Soft delete si utilisé
+        await prisma.supplier.update({
+          where: { id: supplier.id },
+          data: { isActive: false },
+        });
+        deactivatedCount++;
+      } else {
+        // Suppression complète si non utilisé
+        await prisma.supplier.delete({
+          where: { id: supplier.id },
+        });
+        deletedCount++;
+      }
+    }
+
+    res.json({
+      success: true,
+      data: { deletedCount, deactivatedCount },
+      message: `${deletedCount} fournisseur(s) supprimé(s), ${deactivatedCount} désactivé(s)`,
+    });
+  } catch (error) {
+    console.error('Error bulk deleting suppliers:', error);
+    res.status(500).json({ message: 'Erreur lors de la suppression en masse' });
   }
 });
 

@@ -37,6 +37,7 @@ import ArticleForm from './pages/form/ArticleForm';
 import PartnerForm from './pages/form/PartnerForm';
 import MessagesDashboard from './pages/modules/MessagesDashboard';
 import NotificationsDashboard from './pages/modules/NotificationsDashboard';
+import PartenairePage from './pages/PartenairePage';
 
 
 export default function App() {
@@ -75,10 +76,11 @@ export default function App() {
               <Route path="/app/facturation/frais" element={<div className="p-6">Page Frais (à créer)</div>} />
               
               {/* MODULE PARTENAIRES - BLEU */}
-              <Route path="/app/partenaires" element={<div className="p-6"><h1 className="text-2xl font-bold">Dashboard Partenaires</h1></div>} />
+              <Route path="/app/partenaires" element={<PartenairesDashboard />} />
               <Route path="/app/partenaires/new" element={<PartnerForm />} />
-              <Route path="/app/partenaires/clients" element={<PartenairesDashboard />} />
-              <Route path="/app/partenaires/fournisseurs" element={<div className="p-6">Page Fournisseurs (à créer)</div>} />
+              {/* <Route path="/app/partenaires/clients" element={<PartenairesDashboard />} /> */}
+              <Route path="/app/partenaires/clients" element={<PartenairePage type="client"/>} />
+              <Route path="/app/partenaires/fournisseurs" element={<PartenairePage type="fournisseur"/>} />
               
               {/* MODULE INVENTAIRE - ORANGE */}
               <Route path="/app/inventaire" element={<div className="p-6"><h1 className="text-2xl font-bold">Dashboard Inventaire</h1></div>} />

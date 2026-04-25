@@ -9,72 +9,14 @@ import type { AppMessage, AppNotification } from '../../types/notifications';
 
 import { moduleThemes } from '../shared/moduleThemes';
 
-export type ModuleKey = 'facturation' | 'partenaires' | 'inventaire' | 'comptabilite' | 'documents' | 'parametre'| 'messages' | 'notifications';
-
-// const moduleThemes: Record<ModuleKey, { primary: string; secondary: string; navColor: string }> = {
-//   facturation:  { primary: '#7e22ce', secondary: '#a855f7', navColor: '#534AB7' },
-//   partenaires:  { primary: '#2563eb', secondary: '#3b82f6', navColor: '#185FA5' },
-//   inventaire:   { primary: '#16a34a', secondary: '#22c55e', navColor: '#de7045' },
-//   comptabilite: { primary: '#0d9488', secondary: '#14b8a6', navColor: '#0F6E56' },
-//   documents:    { primary: '#2563eb', secondary: '#3b82f6', navColor: '#185FA5' },
-//   parametre:    { primary: '#4b5563', secondary: '#6b7280', navColor: '#5F5E5A' },
-// };
+export type ModuleKey = 'facturation' | 'partenaires' | 'inventaire' | 'comptabilite' | 'documents' | 'parametre' | 'messages' | 'notifications';
 
 const getActiveModule = (pathname: string): ModuleKey => {
   const segments: ModuleKey[] = ['facturation', 'partenaires', 'inventaire', 'comptabilite', 'documents', 'parametre', 'messages', 'notifications'];
   return segments.find(s => pathname.includes(`/${s}`)) ?? 'facturation';
 };
 
-export default function AppLayout() {
-  const { user } = useAuth();
-  const location = useLocation();
-
-  const activeModule = getActiveModule(location.pathname);
-  const currentTheme = moduleThemes[activeModule];
-
-  useEffect(() => {
-    document.documentElement.style.setProperty('--color-primary', currentTheme.primary);
-    document.documentElement.style.setProperty('--color-secondary', currentTheme.secondary);
-  }, [currentTheme]);
-
-interface Company {
-  id: string;
-  name: string;
-  initials: string;
-  color: string;
-  notifications?: number;
-}
-
-// Créer des objets Company
-const companies: Company[] = [
-  { 
-    id: '1',
-    name: 'Profil', 
-    initials: 'PR',
-    color: '#3B82F6',
-    notifications: 3
-  },
-  { 
-    id: '2',
-    name: 'Entreprise', 
-    initials: 'EN',
-    color: '#10B981'
-  },
-  { 
-    id: '3',
-    name: 'Utilisateurs', 
-    initials: 'UT',
-    color: '#F59E0B',
-    notifications: 12
-  },
-  { 
-    id: '4',
-    name: 'Paramètres', 
-    initials: 'PA',
-    color: '#8B5CF6'
-  },
-];
-
+// Données de test - À remplacer par de vraies données de votre API
 const sampleMessages: AppMessage[] = [
   {
     id: '1',
@@ -138,34 +80,69 @@ const sampleNotifications: AppNotification[] = [
   }
 ];
 
+export default function AppLayout() {
+  const { user, currentCompany, isLoading } = useAuth();
+  const location = useLocation();
+
+  const activeModule = getActiveModule(location.pathname);
+  const currentTheme = moduleThemes[activeModule];
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--color-primary', currentTheme.primary);
+    document.documentElement.style.setProperty('--color-secondary', currentTheme.secondary);
+  }, [currentTheme]);
+
+  // Afficher un loader pendant le chargement de l'authentification
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si pas d'utilisateur connecté, ne rien afficher (sera géré par ProtectedRoute)
+  if (!user || !currentCompany) {
+    return null;
+  }
+
+  // Convertir les companies de l'utilisateur pour le ModuleSidebar
+  const sidebarCompanies = user.companyMemberships.map((company, index) => ({
+    id: company.id,
+    name: company.company.name,
+    initials: company.company.name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2),
+    color: company.company.logo || ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444'][index % 5],
+    notifications: 0 // À remplacer par de vraies données
+  }));
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* <Header activeModule={activeModule} navColor={currentTheme.navColor} /> */}
-
       <Header
         activeModule={activeModule}
         navColor={currentTheme.navColor}
-        currentOrganization={{ id: '1', name: 'Mon Entreprise' }}
-        organizations={[
-          { id: '1', name: 'Mon Entreprise' },
-          { id: '2', name: 'Filiale Paris' },
-          { id: '3', name: 'Agence Lyon' },
-        ]}
         messages={sampleMessages}
         notifications={sampleNotifications}
-        onOrganizationChange={(orgId) => console.log('Switch to org:', orgId)}
         onCreateOrganization={() => console.log('Create new organization')}
       />
 
       <div className="flex h-[calc(100vh-64px)]">
         <ModuleSidebar
-          companyName={user?.company?.name || 'Mon Entreprise'}
+          // companyName={currentCompany.name}
           moduleId={activeModule}
-          companies={companies}
+          // companies={sidebarCompanies}
         />
 
         <main className="flex-1 overflow-y-auto">
           <div className="p-6">
+            {/* Notification Banner - Optionnel */}
             {/* <NotificationBanner
               message="Vous utilisez actuellement la version d'essai"
               expiryDate="19-04-2026"
@@ -173,6 +150,7 @@ const sampleNotifications: AppNotification[] = [
               actionLabel="Activer"
               onAction={() => console.log('Activate subscription')}
             /> */}
+            
             <Outlet />
           </div>
         </main>

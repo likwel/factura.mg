@@ -2,13 +2,49 @@
 CREATE TYPE "UserRole" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'MANAGER', 'EMPLOYEE', 'CLIENT');
 
 -- CreateEnum
-CREATE TYPE "SubscriptionPlan" AS ENUM ('FREE', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE');
+CREATE TYPE "CompanyRole" AS ENUM ('OWNER', 'ADMIN', 'MEMBER');
+
+-- CreateEnum
+CREATE TYPE "SubscriptionPlan" AS ENUM ('STARTER', 'PROFESSIONAL', 'ENTERPRISE');
+
+-- CreateEnum
+CREATE TYPE "SubscriptionStatus" AS ENUM ('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED', 'EXPIRED');
+
+-- CreateEnum
+CREATE TYPE "Currency" AS ENUM ('EUR', 'USD', 'MGA');
 
 -- CreateEnum
 CREATE TYPE "InvoiceStatus" AS ENUM ('DRAFT', 'PENDING', 'PAID', 'OVERDUE', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "TransactionType" AS ENUM ('INCOME', 'EXPENSE');
+
+-- CreateEnum
+CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'SUCCEEDED', 'FAILED', 'REFUNDED');
+
+-- CreateTable
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "firstName" TEXT NOT NULL,
+    "lastName" TEXT NOT NULL,
+    "phone" TEXT,
+    "avatar" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "lastLogin" TIMESTAMP(3),
+    "currentPlan" "SubscriptionPlan" DEFAULT 'STARTER',
+    "subscriptionStatus" "SubscriptionStatus" DEFAULT 'TRIAL',
+    "maxUsers" INTEGER DEFAULT 5,
+    "maxArticles" INTEGER DEFAULT 1000,
+    "maxInvoices" INTEGER DEFAULT 1000,
+    "maxStorage" INTEGER DEFAULT 5,
+    "defaultCompanyId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "Company" (
@@ -19,11 +55,7 @@ CREATE TABLE "Company" (
     "address" TEXT,
     "taxId" TEXT,
     "logo" TEXT,
-    "subscriptionPlan" "SubscriptionPlan" NOT NULL DEFAULT 'FREE',
-    "subscriptionExpiry" TIMESTAMP(3),
-    "maxUsers" INTEGER NOT NULL DEFAULT 3,
-    "maxArticles" INTEGER NOT NULL DEFAULT 100,
-    "maxInvoices" INTEGER NOT NULL DEFAULT 50,
+    "ownerId" TEXT NOT NULL,
     "theme" JSONB,
     "settings" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -33,26 +65,86 @@ CREATE TABLE "Company" (
 );
 
 -- CreateTable
-CREATE TABLE "User" (
+CREATE TABLE "CompanyMember" (
     "id" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
-    "firstName" TEXT NOT NULL,
-    "lastName" TEXT NOT NULL,
-    "phone" TEXT,
-    "role" "UserRole" NOT NULL DEFAULT 'EMPLOYEE',
-    "permissions" JSONB,
-    "avatar" TEXT,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "lastLogin" TIMESTAMP(3),
+    "userId" TEXT NOT NULL,
     "companyId" TEXT NOT NULL,
-    "salary" DECIMAL(12,2),
+    "role" "CompanyRole" NOT NULL DEFAULT 'MEMBER',
+    "permissions" JSONB,
     "position" TEXT,
+    "salary" DECIMAL(12,2),
     "hireDate" TIMESTAMP(3),
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "invitedBy" TEXT,
+    "invitedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "CompanyMember_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Subscription" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "plan" "SubscriptionPlan" NOT NULL,
+    "status" "SubscriptionStatus" NOT NULL DEFAULT 'TRIAL',
+    "startDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "endDate" TIMESTAMP(3),
+    "trialEndDate" TIMESTAMP(3),
+    "cancelledAt" TIMESTAMP(3),
+    "nextBillingDate" TIMESTAMP(3),
+    "billingPeriod" TEXT NOT NULL,
+    "amount" DECIMAL(10,2) NOT NULL,
+    "currency" "Currency" NOT NULL DEFAULT 'EUR',
+    "stripeCustomerId" TEXT,
+    "stripeSubscriptionId" TEXT,
+    "stripePriceId" TEXT,
+    "stripePaymentMethodId" TEXT,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Subscription_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PlanFeature" (
+    "id" TEXT NOT NULL,
+    "plan" "SubscriptionPlan" NOT NULL,
+    "featureKey" TEXT NOT NULL,
+    "featureName" TEXT NOT NULL,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "limit" INTEGER,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PlanFeature_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Payment" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "subscriptionId" TEXT,
+    "amount" DECIMAL(10,2) NOT NULL,
+    "currency" "Currency" NOT NULL DEFAULT 'EUR',
+    "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
+    "paymentMethod" TEXT,
+    "stripePaymentIntentId" TEXT,
+    "stripeInvoiceId" TEXT,
+    "stripeChargeId" TEXT,
+    "description" TEXT,
+    "receiptUrl" TEXT,
+    "failureReason" TEXT,
+    "metadata" JSONB,
+    "paidAt" TIMESTAMP(3),
+    "refundedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Payment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -216,6 +308,23 @@ CREATE TABLE "Transaction" (
 );
 
 -- CreateTable
+CREATE TABLE "Debt" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "clientId" TEXT,
+    "supplierId" TEXT,
+    "amount" DECIMAL(12,2) NOT NULL,
+    "paidAmount" DECIMAL(12,2) NOT NULL DEFAULT 0,
+    "dueDate" TIMESTAMP(3) NOT NULL,
+    "description" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Debt_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Payroll" (
     "id" TEXT NOT NULL,
     "companyId" TEXT NOT NULL,
@@ -244,23 +353,6 @@ CREATE TABLE "Presence" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Presence_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Debt" (
-    "id" TEXT NOT NULL,
-    "companyId" TEXT NOT NULL,
-    "clientId" TEXT,
-    "supplierId" TEXT,
-    "amount" DECIMAL(12,2) NOT NULL,
-    "paidAmount" DECIMAL(12,2) NOT NULL DEFAULT 0,
-    "dueDate" TIMESTAMP(3) NOT NULL,
-    "description" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'PENDING',
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Debt_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -300,16 +392,11 @@ CREATE TABLE "AuditLog" (
     "entityId" TEXT NOT NULL,
     "changes" JSONB,
     "ipAddress" TEXT,
+    "userAgent" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
 );
-
--- CreateIndex
-CREATE UNIQUE INDEX "Company_email_key" ON "Company"("email");
-
--- CreateIndex
-CREATE INDEX "Company_email_idx" ON "Company"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
@@ -318,10 +405,73 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 CREATE INDEX "User_email_idx" ON "User"("email");
 
 -- CreateIndex
-CREATE INDEX "User_companyId_idx" ON "User"("companyId");
+CREATE INDEX "User_currentPlan_idx" ON "User"("currentPlan");
+
+-- CreateIndex
+CREATE INDEX "User_subscriptionStatus_idx" ON "User"("subscriptionStatus");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Company_email_key" ON "Company"("email");
+
+-- CreateIndex
+CREATE INDEX "Company_email_idx" ON "Company"("email");
+
+-- CreateIndex
+CREATE INDEX "Company_ownerId_idx" ON "Company"("ownerId");
+
+-- CreateIndex
+CREATE INDEX "CompanyMember_userId_idx" ON "CompanyMember"("userId");
+
+-- CreateIndex
+CREATE INDEX "CompanyMember_companyId_idx" ON "CompanyMember"("companyId");
+
+-- CreateIndex
+CREATE INDEX "CompanyMember_role_idx" ON "CompanyMember"("role");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CompanyMember_userId_companyId_key" ON "CompanyMember"("userId", "companyId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Subscription_stripeSubscriptionId_key" ON "Subscription"("stripeSubscriptionId");
+
+-- CreateIndex
+CREATE INDEX "Subscription_userId_idx" ON "Subscription"("userId");
+
+-- CreateIndex
+CREATE INDEX "Subscription_status_idx" ON "Subscription"("status");
+
+-- CreateIndex
+CREATE INDEX "Subscription_stripeSubscriptionId_idx" ON "Subscription"("stripeSubscriptionId");
+
+-- CreateIndex
+CREATE INDEX "PlanFeature_plan_idx" ON "PlanFeature"("plan");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PlanFeature_plan_featureKey_key" ON "PlanFeature"("plan", "featureKey");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Payment_stripePaymentIntentId_key" ON "Payment"("stripePaymentIntentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Payment_stripeInvoiceId_key" ON "Payment"("stripeInvoiceId");
+
+-- CreateIndex
+CREATE INDEX "Payment_userId_idx" ON "Payment"("userId");
+
+-- CreateIndex
+CREATE INDEX "Payment_subscriptionId_idx" ON "Payment"("subscriptionId");
+
+-- CreateIndex
+CREATE INDEX "Payment_status_idx" ON "Payment"("status");
+
+-- CreateIndex
+CREATE INDEX "Payment_stripePaymentIntentId_idx" ON "Payment"("stripePaymentIntentId");
 
 -- CreateIndex
 CREATE INDEX "Category_companyId_idx" ON "Category"("companyId");
+
+-- CreateIndex
+CREATE INDEX "Category_parentId_idx" ON "Category"("parentId");
 
 -- CreateIndex
 CREATE INDEX "Article_companyId_idx" ON "Article"("companyId");
@@ -330,16 +480,28 @@ CREATE INDEX "Article_companyId_idx" ON "Article"("companyId");
 CREATE INDEX "Article_categoryId_idx" ON "Article"("categoryId");
 
 -- CreateIndex
+CREATE INDEX "Article_supplierId_idx" ON "Article"("supplierId");
+
+-- CreateIndex
+CREATE INDEX "Article_barcode_idx" ON "Article"("barcode");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Article_code_companyId_key" ON "Article"("code", "companyId");
 
 -- CreateIndex
 CREATE INDEX "Client_companyId_idx" ON "Client"("companyId");
 
 -- CreateIndex
+CREATE INDEX "Client_email_idx" ON "Client"("email");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Client_code_companyId_key" ON "Client"("code", "companyId");
 
 -- CreateIndex
 CREATE INDEX "Supplier_companyId_idx" ON "Supplier"("companyId");
+
+-- CreateIndex
+CREATE INDEX "Supplier_email_idx" ON "Supplier"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Supplier_code_companyId_key" ON "Supplier"("code", "companyId");
@@ -351,7 +513,13 @@ CREATE INDEX "Invoice_companyId_idx" ON "Invoice"("companyId");
 CREATE INDEX "Invoice_clientId_idx" ON "Invoice"("clientId");
 
 -- CreateIndex
+CREATE INDEX "Invoice_userId_idx" ON "Invoice"("userId");
+
+-- CreateIndex
 CREATE INDEX "Invoice_status_idx" ON "Invoice"("status");
+
+-- CreateIndex
+CREATE INDEX "Invoice_createdAt_idx" ON "Invoice"("createdAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Invoice_invoiceNumber_companyId_key" ON "Invoice"("invoiceNumber", "companyId");
@@ -360,7 +528,16 @@ CREATE UNIQUE INDEX "Invoice_invoiceNumber_companyId_key" ON "Invoice"("invoiceN
 CREATE INDEX "InvoiceItem_invoiceId_idx" ON "InvoiceItem"("invoiceId");
 
 -- CreateIndex
+CREATE INDEX "InvoiceItem_articleId_idx" ON "InvoiceItem"("articleId");
+
+-- CreateIndex
 CREATE INDEX "Warehouse_companyId_idx" ON "Warehouse"("companyId");
+
+-- CreateIndex
+CREATE INDEX "WarehouseStock_warehouseId_idx" ON "WarehouseStock"("warehouseId");
+
+-- CreateIndex
+CREATE INDEX "WarehouseStock_articleId_idx" ON "WarehouseStock"("articleId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "WarehouseStock_warehouseId_articleId_key" ON "WarehouseStock"("warehouseId", "articleId");
@@ -369,10 +546,49 @@ CREATE UNIQUE INDEX "WarehouseStock_warehouseId_articleId_key" ON "WarehouseStoc
 CREATE INDEX "StockMovement_articleId_idx" ON "StockMovement"("articleId");
 
 -- CreateIndex
+CREATE INDEX "StockMovement_warehouseId_idx" ON "StockMovement"("warehouseId");
+
+-- CreateIndex
+CREATE INDEX "StockMovement_userId_idx" ON "StockMovement"("userId");
+
+-- CreateIndex
+CREATE INDEX "StockMovement_createdAt_idx" ON "StockMovement"("createdAt");
+
+-- CreateIndex
 CREATE INDEX "Transaction_companyId_idx" ON "Transaction"("companyId");
 
 -- CreateIndex
+CREATE INDEX "Transaction_type_idx" ON "Transaction"("type");
+
+-- CreateIndex
+CREATE INDEX "Transaction_date_idx" ON "Transaction"("date");
+
+-- CreateIndex
+CREATE INDEX "Transaction_invoiceId_idx" ON "Transaction"("invoiceId");
+
+-- CreateIndex
+CREATE INDEX "Debt_companyId_idx" ON "Debt"("companyId");
+
+-- CreateIndex
+CREATE INDEX "Debt_clientId_idx" ON "Debt"("clientId");
+
+-- CreateIndex
+CREATE INDEX "Debt_supplierId_idx" ON "Debt"("supplierId");
+
+-- CreateIndex
+CREATE INDEX "Debt_status_idx" ON "Debt"("status");
+
+-- CreateIndex
+CREATE INDEX "Debt_dueDate_idx" ON "Debt"("dueDate");
+
+-- CreateIndex
 CREATE INDEX "Payroll_companyId_idx" ON "Payroll"("companyId");
+
+-- CreateIndex
+CREATE INDEX "Payroll_employeeId_idx" ON "Payroll"("employeeId");
+
+-- CreateIndex
+CREATE INDEX "Payroll_period_idx" ON "Payroll"("period");
 
 -- CreateIndex
 CREATE INDEX "Presence_userId_idx" ON "Presence"("userId");
@@ -381,7 +597,7 @@ CREATE INDEX "Presence_userId_idx" ON "Presence"("userId");
 CREATE INDEX "Presence_companyId_idx" ON "Presence"("companyId");
 
 -- CreateIndex
-CREATE INDEX "Debt_companyId_idx" ON "Debt"("companyId");
+CREATE INDEX "Presence_date_idx" ON "Presence"("date");
 
 -- CreateIndex
 CREATE INDEX "Notification_companyId_idx" ON "Notification"("companyId");
@@ -390,7 +606,25 @@ CREATE INDEX "Notification_companyId_idx" ON "Notification"("companyId");
 CREATE INDEX "Notification_userId_idx" ON "Notification"("userId");
 
 -- CreateIndex
+CREATE INDEX "Notification_isRead_idx" ON "Notification"("isRead");
+
+-- CreateIndex
+CREATE INDEX "Notification_createdAt_idx" ON "Notification"("createdAt");
+
+-- CreateIndex
 CREATE INDEX "Message_companyId_idx" ON "Message"("companyId");
+
+-- CreateIndex
+CREATE INDEX "Message_senderId_idx" ON "Message"("senderId");
+
+-- CreateIndex
+CREATE INDEX "Message_receiverId_idx" ON "Message"("receiverId");
+
+-- CreateIndex
+CREATE INDEX "Message_isRead_idx" ON "Message"("isRead");
+
+-- CreateIndex
+CREATE INDEX "Message_createdAt_idx" ON "Message"("createdAt");
 
 -- CreateIndex
 CREATE INDEX "AuditLog_userId_idx" ON "AuditLog"("userId");
@@ -398,8 +632,29 @@ CREATE INDEX "AuditLog_userId_idx" ON "AuditLog"("userId");
 -- CreateIndex
 CREATE INDEX "AuditLog_entity_idx" ON "AuditLog"("entity");
 
+-- CreateIndex
+CREATE INDEX "AuditLog_entityId_idx" ON "AuditLog"("entityId");
+
+-- CreateIndex
+CREATE INDEX "AuditLog_createdAt_idx" ON "AuditLog"("createdAt");
+
 -- AddForeignKey
-ALTER TABLE "User" ADD CONSTRAINT "User_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Company" ADD CONSTRAINT "Company_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CompanyMember" ADD CONSTRAINT "CompanyMember_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CompanyMember" ADD CONSTRAINT "CompanyMember_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Payment" ADD CONSTRAINT "Payment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Payment" ADD CONSTRAINT "Payment_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "Subscription"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Category" ADD CONSTRAINT "Category_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -462,15 +717,6 @@ ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_companyId_fkey" FOREIGN KE
 ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Payroll" ADD CONSTRAINT "Payroll_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Presence" ADD CONSTRAINT "Presence_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Presence" ADD CONSTRAINT "Presence_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Debt" ADD CONSTRAINT "Debt_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -478,6 +724,15 @@ ALTER TABLE "Debt" ADD CONSTRAINT "Debt_clientId_fkey" FOREIGN KEY ("clientId") 
 
 -- AddForeignKey
 ALTER TABLE "Debt" ADD CONSTRAINT "Debt_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "Supplier"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Payroll" ADD CONSTRAINT "Payroll_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Presence" ADD CONSTRAINT "Presence_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Presence" ADD CONSTRAINT "Presence_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Notification" ADD CONSTRAINT "Notification_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;

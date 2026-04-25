@@ -9,3 +9,59 @@
   --color-primary-600: #2563eb;
   --color-primary-700: #1d4ed8;
 }
+
+.bg-primary{
+  background-color: #6466fb;
+}
+
+.color-primary{
+  color: #6466fb;
+}
+
+.bg-info{
+  background-color: #0ea5e9;
+}
+
+.color-info{
+  color: #0ea5e9;
+}
+
+.bg-success{
+  background-color: #1ab079;
+}
+
+.color-success{
+  color: #1ab079;
+}
+
+.bg-warning{
+  background-color: #f56b26;
+}
+
+.color-warning{
+  color: #f56b26;
+}
+
+.bg-success-2{
+  background-color: #15b8a6;
+}
+
+.color-success-2{
+  color: #15b8a6;
+}
+
+.bg-info-2{
+  background-color: #3b82f6;
+}
+
+.color-info-2{
+  color: #3b82f6;
+}
+
+.bg-primary-2{
+  background-color: #7e22ce;
+}
+
+.color-primary-2{
+  color: #7e22ce;
+}
