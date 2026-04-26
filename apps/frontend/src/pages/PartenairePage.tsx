@@ -251,7 +251,7 @@ export default function PartenairePage({ type }: PartenairePageProps) {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 h-screen">
       <DataTable
         title={type === 'client' ? 'Clients' : 'Fournisseurs'}
         description={`Gérez vos ${type}s et leurs informations`}

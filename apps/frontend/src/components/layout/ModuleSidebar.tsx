@@ -157,7 +157,7 @@ export default function ModuleSidebar({
   
   // Menu items pour le popup utilisateur
   const userMenuItems = [
-    { icon: SettingsIcon, label: 'Paramètres', shortcut: '⌘+Ctrl+,', hasArrow: false, isSpecial: false, url: '/app/parametre/profil' },
+    { icon: SettingsIcon, label: 'Paramètres', shortcut: '⌘+Ctrl+,', hasArrow: false, isSpecial: false, url: '/app/parametre' },
     { icon: Globe, label: 'Langue', hasArrow: true, isSpecial: false, url: '/app/parametre/langue' },
     { icon: HelpCircle, label: "Obtenir de l'aide", hasArrow: false, isSpecial: false, url: '/app/aide' },
     { icon: Star, label: "Mettre à niveau l'abonnement", hasArrow: false, isSpecial: true, url: '/app/parametre/abonnement' },
@@ -276,155 +276,6 @@ export default function ModuleSidebar({
       `}</style>
       
       <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-gray-200 transition-all duration-300 flex flex-col relative`}>
-        {/* Company Header avec Dropdown */}
-        {/* <div className="px-1 py-1 border-b border-gray-200" ref={dropdownRef}>
-          {!isCollapsed ? (
-            <div className="relative border border-gray-200 rounded-lg shadow-sm" style={{background:"#f0f8ff"}}>
-              <button
-                onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
-                className="w-full flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                {currentCompany.logo ? (
-                  <img 
-                    src={currentCompany.logo} 
-                    alt={currentCompany.name}
-                    className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                    style={{ background: companyColors[0] }}
-                  >
-                    {getCompanyInitials(currentCompany.name)}
-                  </div>
-                )}
-                
-                <div className="flex-1 text-left min-w-0">
-                  <h2 className="font-semibold text-gray-800 truncate text-lg flex items-center gap-1">
-                    {currentCompany.name}
-                    {currentCompany.ownerId === user.id && (
-                      <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0"/>
-                    )}
-                  </h2>
-                  <p className="text-xs text-gray-500">
-                    {currentMembership?.role.toLowerCase()} • Plan {subscription?.plan || 'STARTER'}
-                  </p>
-                </div>
-                
-                {showCompanyDropdown ? (
-                  <ChevronsDownUp size={20} className="text-gray-500 flex-shrink-0" />
-                ) : (
-                  <ChevronsUpDown size={20} className="text-gray-700 flex-shrink-0" />
-                )}
-              </button>
-
-              {showCompanyDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-[100] overflow-hidden">
-                  {user.companyMemberships.length > 3 && (
-                    <div className="p-3 border-b border-gray-100">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                        <input
-                          type="text"
-                          placeholder="Rechercher..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          autoFocus
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {user.companyMemberships.length > 0 && (
-                    <div className="max-h-64 overflow-y-auto">
-                      {filteredCompanies.length > 0 ? (
-                        filteredCompanies.map((membership, index) => {
-                          const isOwner = membership.company.ownerId === user.id;
-                          const isActive = membership.companyId === currentCompany.id;
-
-                          return (
-                            <button
-                              key={membership.companyId}
-                              onClick={() => handleCompanySwitch(membership.companyId)}
-                              className={`w-full flex items-center gap-3 p-3 transition-colors ${
-                                isActive ? 'bg-blue-50' : 'hover:bg-gray-50'
-                              }`}
-                            >
-                              {membership.company.logo ? (
-                                <img 
-                                  src={membership.company.logo} 
-                                  alt={membership.company.name}
-                                  className="w-9 h-9 rounded-lg object-cover flex-shrink-0"
-                                />
-                              ) : (
-                                <div 
-                                  className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
-                                  style={{ background: companyColors[index % companyColors.length] }}
-                                >
-                                  {getCompanyInitials(membership.company.name)}
-                                </div>
-                              )}
-                              
-                              <div className="flex-1 text-left min-w-0">
-                                <div className="flex items-center gap-1">
-                                  <p className="font-medium text-gray-800 truncate text-sm">
-                                    {membership.company.name}
-                                  </p>
-                                  {isOwner && (
-                                    <Crown className="w-3 h-3 text-yellow-500 flex-shrink-0" />
-                                  )}
-                                </div>
-                                <p className="text-xs text-gray-500 capitalize">
-                                  {membership.role.toLowerCase()}
-                                  {membership.position && ` • ${membership.position}`}
-                                </p>
-                              </div>
-                              
-                              {isActive && (
-                                <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                              )}
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <div className="p-8 text-center text-gray-500 text-sm">
-                          Aucune entreprise trouvée
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="border-t border-gray-100 p-2">
-                    <button 
-                      onClick={handleAddCompany}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Ajouter une organisation
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="relative group">
-              <button
-                onClick={() => setIsCollapsed(false)}
-                className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-sm mx-auto hover:ring-2 hover:ring-offset-2 hover:ring-gray-300 transition-all"
-                style={{ background: companyColors[0] }}
-              >
-                {getCompanyInitials(currentCompany.name)}
-              </button>
-              
-              <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                {currentCompany.name}
-                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
-              </div>
-            </div>
-          )}
-        </div> */}
-
         {/* Toggle Button */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -453,51 +304,55 @@ export default function ModuleSidebar({
                 )}
                 
                 <div className="relative group">
-                  <NavLink
-                    to={item.path}
-                    end={item.exact}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all relative ${
-                        isActive
-                          ? `${colorClasses.bg} ${colorClasses.text} font-medium`
-                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                      } ${isCollapsed ? 'justify-center' : ''}`
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        {isActive && !isCollapsed && (
-                          <div className={`absolute left-0 top-0 bottom-0 w-1 ${colorClasses.buttonBg} rounded-r-full`}></div>
-                        )}
-                        
-                        <Icon className="w-5 h-5 flex-shrink-0" />
-                        
-                        {!isCollapsed && <span className="flex-1 font-medium">{item.name}</span>}
-                        
-                        {hasAddButton && !isCollapsed && (
-                          <button
-                            className={`p-1 ${colorClasses.buttonBg} ${colorClasses.buttonHover} text-white rounded-md opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-95`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              navigate(`${item.path}/new`);
-                              onAddItem?.(item.name, item.path);
-                            }}
-                            title={`Ajouter ${item.name}`}
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        
-                        {isCollapsed && (
-                          <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                            {item.name}
-                            <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
-                          </div>
-                        )}
-                      </>
+                  {/* ✅ Conteneur flex pour NavLink et bouton côte à côte */}
+                  <div className="flex items-center gap-1">
+                    <NavLink
+                      to={item.path}
+                      end={item.exact}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all relative flex-1 ${
+                          isActive
+                            ? `${colorClasses.bg} ${colorClasses.text} font-medium`
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        } ${isCollapsed ? 'justify-center' : ''}`
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          {isActive && !isCollapsed && (
+                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${colorClasses.buttonBg} rounded-r-full`}></div>
+                          )}
+                          
+                          <Icon className="w-5 h-5 flex-shrink-0" />
+                          
+                          {!isCollapsed && <span className="flex-1 font-medium">{item.name}</span>}
+                          
+                          {isCollapsed && (
+                            <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                              {item.name}
+                              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                    
+                    {/* ✅ Bouton d'ajout SORTI du NavLink */}
+                    {hasAddButton && !isCollapsed && (
+                      <button
+                        className={`p-1 ${colorClasses.buttonBg} ${colorClasses.buttonHover} text-white rounded-md opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-95 flex-shrink-0`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigate(`${item.path}/new`);
+                          onAddItem?.(item.name, item.path);
+                        }}
+                        title={`Ajouter ${item.name}`}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
                     )}
-                  </NavLink>
+                  </div>
                 </div>
               </div>
             );
@@ -561,39 +416,54 @@ export default function ModuleSidebar({
               </div>
             )}
 
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="w-full px-3 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors rounded-lg"
-            >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                {userInitials}
-              </div>
-              <div className="flex-1 text-left min-w-0">
-                <p className="font-medium text-gray-800 truncate text-sm">{userName}</p>
-                <p className="text-gray-500 text-xs truncate">Plan {userPlan}</p>
-              </div>
-              <div className="flex items-center gap-2">
+            {/* ✅ Container principal remplacé par un div */}
+            <div className="w-full px-3 py-2 flex items-center gap-3 hover:bg-gray-50 transition-colors rounded-lg">
+              {/* Avatar et nom cliquable pour ouvrir le menu */}
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-3 flex-1 min-w-0 text-left"
+              >
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  {userInitials}
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="font-medium text-gray-800 truncate text-sm">{userName}</p>
+                  <p className="text-gray-500 text-xs truncate">Plan {userPlan}</p>
+                </div>
+              </button>
               
+              {/* Boutons d'action séparés */}
+              <div className="flex items-center gap-2">
                 {subscription?.isOwner && (
                   <div className="relative group">
-                  <button className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors border border-gray-300 relative">
-                    <Download className="w-4 h-4 text-gray-600" />
-                    {/* Dot animé pour attirer l'attention */}
-                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
-                    </span>
-                  </button>
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                    Passer au plan supérieur
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    <NavLink
+                      to="/app/parametre/abonnement"
+                      className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors border border-gray-300 relative block"
+                    >
+                      <Download className="w-4 h-4 text-gray-600" />
+                      {/* Dot animé pour attirer l'attention */}
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                      </span>
+                    </NavLink>
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Passer au plan supérieur
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
                   </div>
-                </div>
                 )}
-                <ChevronsUpDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                
+                {/* Icône chevron pour le menu */}
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="p-1"
+                >
+                  <ChevronsUpDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                </button>
               </div>
-            </button>
+            </div>
           </div>
         ) : (
           <div className="px-3 py-3 border-t border-gray-200">

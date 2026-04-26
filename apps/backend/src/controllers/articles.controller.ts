@@ -18,6 +18,7 @@ router.get('/', authenticate, authorize(Permission.VIEW_ARTICLES), async (req: A
       lowStock,
     } = req.query;
 
+
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
@@ -92,10 +93,17 @@ router.get('/', authenticate, authorize(Permission.VIEW_ARTICLES), async (req: A
 // GET /:id - Détail d'un article
 router.get('/:id', authenticate, authorize(Permission.VIEW_ARTICLES), async (req: AuthRequest, res) => {
   try {
+    // ✅ Vérification de sécurité
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
+    const companyId = req.user.companyId;
+
     const article = await prisma.article.findFirst({
       where: {
         id: req.params.id,
-        companyId: req.user!.companyId,
+        companyId,
       },
       include: {
         category: true,
@@ -152,9 +160,16 @@ router.post('/', authenticate, authorize(Permission.CREATE_ARTICLES), async (req
       });
     }
 
+    // ✅ Vérification de sécurité
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
+    const companyId = req.user.companyId;
+
     // Vérifier que le code est unique dans la company
     const existing = await prisma.article.findFirst({
-      where: { code, companyId: req.user!.companyId },
+      where: { code, companyId },
     });
 
     if (existing) {
@@ -163,13 +178,20 @@ router.post('/', authenticate, authorize(Permission.CREATE_ARTICLES), async (req
 
     // Vérifier la limite d'articles du plan
     const company = await prisma.company.findUnique({
-      where: { id: req.user!.companyId },
-      select: { maxArticles: true, _count: { select: { articles: true } } },
+      where: { id: req.user!.companyId! },
+      select: { 
+        owner: {
+          select: {
+            maxArticles: true // ✅ maxArticles est sur User (owner)
+          }
+        },
+        _count: { select: { articles: true } } 
+      },
     });
 
-    if (company && company._count.articles >= company.maxArticles) {
+    if (company && company.owner.maxArticles && company._count.articles >= company.owner.maxArticles) {
       return res.status(403).json({
-        message: `Limite d'articles atteinte (${company.maxArticles}). Veuillez mettre à niveau votre abonnement.`,
+        message: `Limite d'articles atteinte (${company.owner.maxArticles}). Veuillez mettre à niveau votre abonnement.`,
       });
     }
 
@@ -215,6 +237,7 @@ router.put('/:id', authenticate, authorize(Permission.EDIT_ARTICLES), async (req
       sellingPrice,
       stockMin,
       stockMax,
+      curentStock,
       unit,
       barcode,
       image,
@@ -223,9 +246,16 @@ router.put('/:id', authenticate, authorize(Permission.EDIT_ARTICLES), async (req
       isActive,
     } = req.body;
 
+    // ✅ Vérification de sécurité
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
+    const companyId = req.user.companyId;
+
     // Vérifier que l'article appartient à la company
     const existing = await prisma.article.findFirst({
-      where: { id: req.params.id, companyId: req.user!.companyId },
+      where: { id: req.params.id, companyId},
     });
 
     if (!existing) {
@@ -256,6 +286,7 @@ router.put('/:id', authenticate, authorize(Permission.EDIT_ARTICLES), async (req
         ...(sellingPrice !== undefined && { sellingPrice }),
         ...(stockMin !== undefined && { stockMin }),
         ...(stockMax !== undefined && { stockMax }),
+        ...(curentStock !== undefined && { curentStock }),
         ...(unit !== undefined && { unit }),
         ...(barcode !== undefined && { barcode }),
         ...(image !== undefined && { image }),
@@ -279,8 +310,15 @@ router.put('/:id', authenticate, authorize(Permission.EDIT_ARTICLES), async (req
 // DELETE /:id - Supprimer un article (soft delete via isActive)
 router.delete('/:id', authenticate, authorize(Permission.DELETE_ARTICLES), async (req: AuthRequest, res) => {
   try {
+    // ✅ Vérification de sécurité
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
+    const companyId = req.user.companyId;
+
     const article = await prisma.article.findFirst({
-      where: { id: req.params.id, companyId: req.user!.companyId },
+      where: { id: req.params.id, companyId },
       include: {
         invoiceItems: { take: 1 },
         stockMovements: { take: 1 },
@@ -323,8 +361,15 @@ router.post('/:id/stock-movement', authenticate, authorize(Permission.MANAGE_STO
       return res.status(400).json({ message: `Type invalide. Valeurs acceptées: ${validTypes.join(', ')}` });
     }
 
+    // ✅ Vérification de sécurité
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
+    const companyId = req.user.companyId;
+
     const article = await prisma.article.findFirst({
-      where: { id: req.params.id, companyId: req.user!.companyId },
+      where: { id: req.params.id, companyId },
     });
 
     if (!article) {
@@ -410,12 +455,19 @@ router.post('/:id/stock-movement', authenticate, authorize(Permission.MANAGE_STO
 // GET /:id/stock-movements - Historique des mouvements de stock
 router.get('/:id/stock-movements', authenticate, authorize(Permission.VIEW_ARTICLES), async (req: AuthRequest, res) => {
   try {
+    // ✅ Vérification de sécurité
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
+    const companyId = req.user.companyId;
+
     const { page = '1', limit = '20' } = req.query;
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
 
     const article = await prisma.article.findFirst({
-      where: { id: req.params.id, companyId: req.user!.companyId },
+      where: { id: req.params.id, companyId },
     });
 
     if (!article) {
@@ -454,7 +506,13 @@ router.get('/:id/stock-movements', authenticate, authorize(Permission.VIEW_ARTIC
 // GET /stats/summary - Résumé statistique des articles
 router.get('/stats/summary', authenticate, authorize(Permission.VIEW_ARTICLES), async (req: AuthRequest, res) => {
   try {
-    const companyId = req.user!.companyId;
+
+    // ✅ Vérification de sécurité
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
+    const companyId = req.user.companyId;
 
     const [total, active, lowStock, outOfStock] = await Promise.all([
       prisma.article.count({ where: { companyId } }),

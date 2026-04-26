@@ -18,9 +18,16 @@ interface Company {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
+  address?: string | null;
+  taxId?: string | null;
   logo?: string;
   ownerId: string;
   owner: CompanyOwner;
+  theme?: any;
+  settings?: any;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface CompanyMembership {
@@ -36,6 +43,7 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
+  phone?: string | null;
   avatar?: string;
   defaultCompanyId?: string;
   
@@ -67,6 +75,7 @@ interface SubscriptionInfo {
 interface AuthContextType {
   user: User | null;
   token: string | null;
+  setUser: (user: User | null) => void;
   currentCompany: Company | null;
   currentMembership: CompanyMembership | null;
   subscription: SubscriptionInfo | null;
@@ -109,15 +118,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ Calculer currentCompany et currentMembership avec vérifications
+  // Calculer currentCompany et currentMembership
   const currentMembership = user?.companyMemberships?.find(
     m => m.companyId === currentCompanyId
   ) || null;
   
   const currentCompany = currentMembership?.company || null;
 
-  // ✅ Récupérer les informations d'abonnement
-  const refreshSubscription = async () => {
+  // Fonction pour rafraîchir l'abonnement
+  const refreshSubscription = React.useCallback(async () => {
     if (!token || !currentCompany) {
       console.log('⚠️ Skip refreshSubscription - missing token or company');
       return;
@@ -125,9 +134,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       console.log('🔄 Refreshing subscription for company:', currentCompany.id);
-      
-      // TODO: Implémenter l'endpoint /subscription/limits côté backend
-      // Pour l'instant, on utilise directement les données du owner
       
       const owner = currentCompany.owner;
       const isOwner = user?.id === owner.id;
@@ -137,20 +143,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status: owner.subscriptionStatus || 'TRIAL',
         isOwner,
         ownerName: `${owner.firstName} ${owner.lastName}`,
-        // Limites depuis le owner
         limits: {
           users: { 
-            current: 0, // TODO: Récupérer depuis l'API
+            current: 0,
             max: owner.maxUsers || 5, 
             exceeded: false 
           },
           articles: { 
-            current: 0, // TODO: Récupérer depuis l'API
+            current: 0,
             max: owner.maxArticles || 1000, 
             exceeded: false 
           },
           invoices: { 
-            current: 0, // TODO: Récupérer depuis l'API
+            current: 0,
             max: owner.maxInvoices || 1000, 
             exceeded: false 
           },
@@ -166,30 +171,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('✅ Subscription refreshed:', subscriptionData);
       
-      /* 
-      // Code pour quand l'endpoint sera prêt:
-      const response = await api.get('/subscription/limits', {
-        params: { companyId: currentCompany.id }
-      });
-      
-      const subscriptionData: SubscriptionInfo = {
-        plan: owner.currentPlan || 'STARTER',
-        status: owner.subscriptionStatus || 'TRIAL',
-        isOwner,
-        ownerName: `${owner.firstName} ${owner.lastName}`,
-        ...response.data
-      };
-      
-      setSubscription(subscriptionData);
-      localStorage.setItem('subscription', JSON.stringify(subscriptionData));
-      */
-      
     } catch (error) {
       console.error('❌ Erreur subscription:', error);
     }
-  };
+  }, [token, currentCompany, user?.id]);
 
-  // ✅ Vérifier le token au chargement
+  // Initialisation de l'authentification
   useEffect(() => {
     const initAuth = async () => {
       console.log('🔍 Initializing auth - token:', token ? 'exists' : 'missing');
@@ -207,7 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
           
-          // ✅ Définir la company par défaut avec vérifications
+          // Définir la company par défaut
           let defaultCompany = currentCompanyId;
           
           if (!defaultCompany) {
@@ -228,7 +215,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         } catch (error) {
           console.error('❌ Token invalide:', error);
-          logout();
+          // Déconnexion en cas d'erreur
+          setToken(null);
+          setUser(null);
+          setCurrentCompanyId(null);
+          setSubscription(null);
+          
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('currentCompanyId');
+          localStorage.removeItem('subscription');
+          
+          delete api.defaults.headers.common['Authorization'];
         }
       }
       
@@ -236,15 +234,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     initAuth();
-  }, []); // ✅ Exécuter une seule fois au montage
+  }, []); // Exécuter une seule fois au montage
 
-  // ✅ Rafraîchir subscription quand la company change
+  // Rafraîchir l'abonnement quand la company change
   useEffect(() => {
     if (currentCompany && token && !isLoading) {
       console.log('🔄 Company changed, refreshing subscription');
       refreshSubscription();
     }
-  }, [currentCompanyId]); // ✅ Dépendre uniquement de currentCompanyId
+  }, [currentCompanyId, token, isLoading, currentCompany, refreshSubscription]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -264,7 +262,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('token', newToken);
       localStorage.setItem('user', JSON.stringify(newUser));
       
-      // ✅ Définir la company active avec vérifications
+      // Définir la company active
       let defaultCompany = newUser.defaultCompanyId;
       
       if (!defaultCompany && newUser.companyMemberships?.length > 0) {
@@ -289,7 +287,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const switchCompany = async (companyId: string) => {
     console.log('🔄 Switching to company:', companyId);
     
-    // ✅ Vérifier que l'utilisateur a accès à cette company
+    // Vérifier que l'utilisateur a accès à cette company
     const membership = user?.companyMemberships?.find(m => m.companyId === companyId);
     
     if (!membership) {
@@ -335,6 +333,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider value={{ 
       user, 
+      setUser,
       token, 
       currentCompany,
       currentMembership,

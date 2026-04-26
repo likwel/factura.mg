@@ -791,7 +791,7 @@ export function DataTable<T extends { id: string | number }>({
                         <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
                             <tr>
                                 {selectable && (
-                                    <th className="w-12 px-6 py-3">
+                                    <th className="w-9 px-2 py-3">
                                         <input
                                             type="checkbox"
                                             checked={isAllSelected}
@@ -807,7 +807,7 @@ export function DataTable<T extends { id: string | number }>({
                                 {columns.map((column, index) => (
                                     <th
                                         key={index}
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                                         style={{ width: column.width }}
                                     >
                                         {column.header}
@@ -815,7 +815,7 @@ export function DataTable<T extends { id: string | number }>({
                                 ))}
 
                                 {rowActions.length > 0 && (
-                                    <th className="w-16 px-6 py-3"></th>
+                                    <th className="w-16 px-3 py-3"></th>
                                 )}
                             </tr>
                         </thead>
@@ -824,7 +824,7 @@ export function DataTable<T extends { id: string | number }>({
                             {data.map((row) => (
                                 <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                                     {selectable && (
-                                        <td className="px-6 py-4">
+                                        <td className="px-4 py-2">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedRows.has(row.id)}
@@ -835,7 +835,7 @@ export function DataTable<T extends { id: string | number }>({
                                     )}
 
                                     {columns.map((column, colIndex) => (
-                                        <td key={colIndex} className="px-6 py-4 text-sm text-gray-900">
+                                        <td key={colIndex} className="px-2 py-2 text-sm text-gray-900">
                                             {column.render
                                                 ? column.render(row[column.key as keyof T], row)
                                                 : String(row[column.key as keyof T] || '')}
@@ -843,7 +843,7 @@ export function DataTable<T extends { id: string | number }>({
                                     ))}
 
                                     {rowActions.length > 0 && (
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-2 py-2 text-right">
                                             <RowActionsMenu 
                                                 actions={rowActions} 
                                                 row={row}
@@ -940,7 +940,8 @@ export function DataTable<T extends { id: string | number }>({
     );
 }
 
-// Menu d'actions avec confirmation
+
+// Menu d'actions avec position dynamique et confirmation
 function RowActionsMenu<T>({ 
     actions, 
     row,
@@ -951,11 +952,88 @@ function RowActionsMenu<T>({
     onConfirmAction: (action: TableAction<T>) => void;
 }) {
     const [showMenu, setShowMenu] = useState(false);
+    const [menuPosition, setMenuPosition] = useState<{
+        top?: number;
+        bottom?: number;
+        left?: number;
+        right?: number;
+    }>({});
+    
+    const buttonRef = useRef<HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
+    // Calculer la position dynamique du menu
+    useEffect(() => {
+        if (showMenu && buttonRef.current && menuRef.current) {
+            const buttonRect = buttonRef.current.getBoundingClientRect();
+            const menuRect = menuRef.current.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            const MENU_OFFSET = 8; // Espace entre le bouton et le menu
+            const EDGE_PADDING = 16; // Marge par rapport aux bords de l'écran
+            
+            let position: typeof menuPosition = {};
+            
+            // ===== Position HORIZONTALE =====
+            const spaceOnRight = viewportWidth - buttonRect.right;
+            const spaceOnLeft = buttonRect.left;
+            const menuWidth = menuRect.width;
+            
+            // Calculer la distance depuis le bord droit de la fenêtre
+            const distanceFromRight = viewportWidth - buttonRect.right;
+            
+            // Essayer d'abord d'aligner le menu à droite du bouton
+            if (spaceOnRight >= menuWidth + EDGE_PADDING) {
+                // Assez d'espace à droite - utiliser position 'right'
+                position.right = distanceFromRight;
+            } else if (spaceOnLeft >= menuWidth + EDGE_PADDING) {
+                // Pas assez à droite, mais assez à gauche - aligner à gauche du bouton
+                position.left = Math.max(EDGE_PADDING, buttonRect.left - menuWidth + buttonRect.width);
+            } else {
+                // Pas assez d'espace des deux côtés
+                // Privilégier le côté avec le plus d'espace
+                if (spaceOnRight >= spaceOnLeft) {
+                    // Plus d'espace à droite
+                    position.right = EDGE_PADDING;
+                } else {
+                    // Plus d'espace à gauche
+                    position.left = EDGE_PADDING;
+                }
+            }
+            
+            // ===== Position VERTICALE =====
+            const spaceBelow = viewportHeight - buttonRect.bottom;
+            const spaceAbove = buttonRect.top;
+            
+            if (spaceBelow >= menuRect.height + MENU_OFFSET) {
+                // Assez d'espace en dessous
+                position.top = buttonRect.bottom + MENU_OFFSET;
+            } else if (spaceAbove >= menuRect.height + MENU_OFFSET) {
+                // Pas assez en dessous, placer au-dessus
+                position.bottom = viewportHeight - buttonRect.top + MENU_OFFSET;
+            } else {
+                // Pas assez d'espace, placer où il y a le plus d'espace
+                if (spaceBelow > spaceAbove) {
+                    position.top = buttonRect.bottom + MENU_OFFSET;
+                } else {
+                    position.bottom = viewportHeight - buttonRect.top + MENU_OFFSET;
+                }
+            }
+            
+            setMenuPosition(position);
+        }
+    }, [showMenu]);
+
+    // Fermer le menu si clic à l'extérieur
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+            if (
+                menuRef.current && 
+                buttonRef.current &&
+                !menuRef.current.contains(event.target as Node) &&
+                !buttonRef.current.contains(event.target as Node)
+            ) {
                 setShowMenu(false);
             }
         };
@@ -963,6 +1041,20 @@ function RowActionsMenu<T>({
         if (showMenu) {
             document.addEventListener('mousedown', handleClickOutside);
             return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showMenu]);
+
+    // Fermer le menu avec Escape
+    useEffect(() => {
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setShowMenu(false);
+            }
+        };
+
+        if (showMenu) {
+            document.addEventListener('keydown', handleEscape);
+            return () => document.removeEventListener('keydown', handleEscape);
         }
     }, [showMenu]);
 
@@ -976,31 +1068,98 @@ function RowActionsMenu<T>({
         }
     };
 
+    // Grouper les actions par séparateur (actions danger séparées)
+    const groupedActions = actions.reduce((groups, action, index) => {
+        if (index > 0 && action.variant === 'danger' && actions[index - 1].variant !== 'danger') {
+            groups.push({ separator: true });
+        }
+        groups.push(action);
+        return groups;
+    }, [] as Array<TableAction<T> | { separator: true }>);
+
     return (
-        <div className="relative" ref={menuRef}>
+        <div className="relative inline-block">
             <button
+                ref={buttonRef}
                 onClick={() => setShowMenu(!showMenu)}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                className={`p-1.5 rounded-lg transition-all duration-200 ${
+                    showMenu 
+                        ? 'bg-blue-50 text-blue-600' 
+                        : 'hover:bg-gray-100 text-gray-400 hover:text-gray-600'
+                }`}
+                aria-label="Actions"
+                aria-expanded={showMenu}
             >
-                <MoreVertical className="w-5 h-5 text-gray-400" />
+                <MoreVertical className="w-5 h-5" />
             </button>
 
+            {/* Backdrop pour fermer le menu */}
             {showMenu && (
-                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px] overflow-hidden">
-                    {actions.map((action, index) => (
-                        <button
-                            key={index}
-                            onClick={() => handleActionClick(action)}
-                            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3 transition-colors ${
-                                action.variant === 'danger' 
-                                    ? 'text-red-600' 
-                                    : 'text-gray-700'
-                            }`}
-                        >
-                            {action.icon}
-                            {action.label}
-                        </button>
-                    ))}
+                <div 
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowMenu(false)}
+                />
+            )}
+
+            {/* Menu déroulant */}
+            {showMenu && (
+                <div 
+                    ref={menuRef}
+                    className="fixed bg-white border border-gray-200 rounded-lg shadow-xl z-50 min-w-[180px] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                    style={{
+                        top: menuPosition.top,
+                        bottom: menuPosition.bottom,
+                        left: menuPosition.left,
+                        right: menuPosition.right,
+                    }}
+                >
+                    <div className="py-1">
+                        {groupedActions.map((item, index) => {
+                            // Séparateur
+                            if ('separator' in item) {
+                                return (
+                                    <div 
+                                        key={`separator-${index}`} 
+                                        className="h-px bg-gray-200 my-1"
+                                    />
+                                );
+                            }
+                            
+                            // Action
+                            const action = item as TableAction<T>;
+                            const isDestructive = action.variant === 'danger';
+                            
+                            return (
+                                <button
+                                    key={index}
+                                    onClick={() => handleActionClick(action)}
+                                    // disabled={action.disabled}
+                                    className={`
+                                        w-full px-4 py-2.5 text-left text-sm 
+                                        flex items-center gap-3 
+                                        transition-all duration-150
+                                        disabled:opacity-50 disabled:cursor-not-allowed
+                                        ${isDestructive 
+                                            ? 'text-red-600 hover:bg-red-50 hover:text-red-700' 
+                                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                                        }
+                                    `}
+                                >
+                                    <span className={`flex-shrink-0 ${isDestructive ? 'text-red-500' : 'text-gray-400'}`}>
+                                        {action.icon}
+                                    </span>
+                                    <span className="font-medium flex-1">
+                                        {action.label}
+                                    </span>
+                                    {action.requireConfirm && (
+                                        <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                                            ⚠
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
         </div>

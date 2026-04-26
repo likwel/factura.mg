@@ -1,5 +1,5 @@
 import { DataTable, Column, TableAction, BulkAction } from '../components/common/DataTable';
-import { Trash2, Eye, Edit, AlertCircle, Package } from 'lucide-react';
+import { Trash2, Eye, Edit, AlertCircle, Package, Copy } from 'lucide-react';
 import { useArticles, ACTIVE_FILTERS, STOCK_STATUS } from '../hooks/useArticles';
 import { Article } from '../services/article.service';
 import { useNavigate } from 'react-router-dom';
@@ -25,15 +25,15 @@ export default function ArticlesPage() {
     {
       key: 'code',
       header: 'CODE',
-      width: '120px',
+      width: '100px',
       render: (value) => (
-        <span className="font-mono text-sm font-semibold text-gray-700">{value}</span>
+        <span className="font-mono text-base font-semibold text-gray-700">{value}</span>
       ),
     },
     {
       key: 'name',
       header: 'ARTICLE',
-      width: '220px',
+      width: '260px',
       render: (value, row) => (
         <div className="flex items-center gap-2">
           {row.image ? (
@@ -44,7 +44,7 @@ export default function ArticlesPage() {
             </div>
           )}
           <div>
-            <p className="font-medium text-sm">{value}</p>
+            <p className="font-medium text-base">{value}</p>
             {row.category && (
               <p className="text-xs text-gray-400">{row.category.name}</p>
             )}
@@ -55,21 +55,32 @@ export default function ArticlesPage() {
     {
       key: 'currentStock',
       header: 'STOCK',
-      width: '130px',
+      width: '160px',
       render: (value, row) => {
         const status = STOCK_STATUS(row);
         const styles = {
-          ok:  'text-green-700 bg-green-50',
-          low: 'text-yellow-700 bg-yellow-50',
-          out: 'text-red-700 bg-red-50',
+          ok:  'text-green-700 bg-green-100',
+          low: 'text-yellow-700 bg-yellow-100',
+          out: 'text-red-700 bg-red-100',
         };
-        const labels = { ok: 'En stock', low: 'Stock bas', out: 'Rupture' };
+        
+        // Messages de tooltip selon le statut
+        const tooltips = {
+          ok: 'Stock suffisant',
+          low: 'Stock faible - Réapprovisionnement conseillé',
+          out: 'Rupture de stock'
+        };
+
+        const labels = { ok: '✔', low: '⚠', out: '❌' };
         return (
-          <div className="flex flex-col gap-0.5">
-            <span className="font-semibold text-sm">
+          <div className="flex flex-row gap-0.5">
+            <span className="text-base">
               {value} {row.unit ?? 'unité(s)'}
             </span>
-            <span className={`text-xs px-2 py-0.5 rounded-full w-fit font-medium ${styles[status]}`}>
+            <span className={`cursor-pointer ms-1 text-xs px-2 py-0.5 rounded-full w-fit font-medium ${styles[status]}`}
+              title={tooltips[status]}
+              aria-label={tooltips[status]}
+              >
               {labels[status]}
             </span>
           </div>
@@ -79,9 +90,9 @@ export default function ArticlesPage() {
     {
       key: 'purchasePrice',
       header: "PRIX D'ACHAT",
-      width: '150px',
+      width: '140px',
       render: (value) => (
-        <span className="text-sm">{Number(value).toLocaleString('fr-FR')} Ar</span>
+        <span className="text-base">{Number(value).toLocaleString('fr-FR')} Ar</span>
       ),
     },
     {
@@ -89,24 +100,24 @@ export default function ArticlesPage() {
       header: 'PRIX DE VENTE',
       width: '150px',
       render: (value) => (
-        <span className="font-semibold text-sm">{Number(value).toLocaleString('fr-FR')} Ar</span>
+        <span className="font-semibold text-base">{Number(value).toLocaleString('fr-FR')} Ar</span>
       ),
     },
-    {
-      key: 'supplier',
-      header: 'FOURNISSEUR',
-      width: '160px',
-      render: (supplier) =>
-        supplier ? (
-          <span className="text-sm text-gray-600">{supplier.name}</span>
-        ) : (
-          <span className="text-xs text-gray-300 italic">—</span>
-        ),
-    },
+    // {
+    //   key: 'supplier',
+    //   header: 'FOURNISSEUR',
+    //   width: '160px',
+    //   render: (supplier) =>
+    //     supplier ? (
+    //       <span className="text-sm text-gray-600">{supplier.name}</span>
+    //     ) : (
+    //       <span className="text-xs text-gray-300 italic">—</span>
+    //     ),
+    // },
     {
       key: 'isActive',
       header: 'STATUT',
-      width: '110px',
+      width: '100px',
       render: (value) => (
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
           value ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
@@ -118,7 +129,7 @@ export default function ArticlesPage() {
     {
       key: 'createdAt',
       header: 'CRÉÉ LE',
-      width: '130px',
+      width: '100px',
       render: (value) => new Date(value).toLocaleDateString('fr-FR'),
     },
   ];
@@ -127,12 +138,17 @@ export default function ArticlesPage() {
     {
       label: 'Voir',
       icon: <Eye className="w-4 h-4" />,
-      onClick: (article) => navigate(`/articles/${article.id}`),
+      onClick: (article) => navigate(`/app/facturation/articles/${article.id}`),
     },
     {
       label: 'Modifier',
       icon: <Edit className="w-4 h-4" />,
-      onClick: (article) => navigate(`/articles/${article.id}/edit`),
+      onClick: (article) => navigate(`/app/facturation/articles/${article.id}/edit`),
+    },
+    {
+      label: 'Dupliquer',
+      icon: <Copy className="w-4 h-4" />,
+      onClick: (article) => navigate(`/app/facturation/articles/${article.id}/duplicate`),
     },
     {
       label: 'Supprimer',
@@ -165,7 +181,7 @@ export default function ArticlesPage() {
         createButtonColor ="purple"
         description="Gérez votre catalogue d'articles"
         createLabel="Nouvel article"
-        onCreateClick={() => navigate('/articles/new')}
+        onCreateClick={() => navigate('/app/facturation/articles/new')}
         onRefresh={refresh}
 
         data={articles}

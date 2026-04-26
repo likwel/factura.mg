@@ -1,5 +1,5 @@
 // apps/frontend/src/pages/modules/parametre/ParametreDashboard.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   User, Building2, Users, Shield, Bell, Palette, 
   CreditCard, Key, Smartphone, Mail, Lock,
@@ -7,7 +7,9 @@ import {
   Trash2, Plus, CheckCircle2, Crown
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 interface ParametreDashboardProps {
   id?: string;
@@ -30,21 +32,132 @@ export default function ParametreDashboard({ id = 'profil' }: ParametreDashboard
   );
 }
 
+
 // ============================================
-// SECTION PROFIL
+// SECTION PROFIL (Corrigée et Fonctionnelle)
 // ============================================
 function ProfilSection({ user }: any) {
+  const { setUser } = useAuth(); // Pour mettre à jour le contexte
+  const [formData, setFormData] = useState({
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    email: user?.email || '',
+    phone: user?.phone || ''
+  });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Mettre à jour le state quand user change
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || ''
+      });
+    }
+  }, [user]);
+
+  // Gérer la sélection de l'avatar
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Vérifier la taille (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrorMessage('L\'image ne doit pas dépasser 5MB');
+        toast.error('L\'image ne doit pas dépasser 5MB');
+        return;
+      }
+
+      // Vérifier le type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setErrorMessage('Seules les images (JPEG, PNG, GIF, WebP) sont autorisées');
+        toast.error('Seules les images (JPEG, PNG, GIF, WebP) sont autorisées');
+        return;
+      }
+
+      setAvatarFile(file);
+      
+      // Créer une preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async () => {
     setLoading(true);
-    setTimeout(() => {
+    setSuccessMessage('');
+    setErrorMessage('');
+
+    try {
+      // Validation côté client
+      if (!formData.firstName || formData.firstName.trim().length < 2) {
+        throw new Error('Le prénom doit contenir au moins 2 caractères');
+      }
+
+      if (!formData.lastName || formData.lastName.trim().length < 2) {
+        throw new Error('Le nom doit contenir au moins 2 caractères');
+      }
+
+      if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        throw new Error('Adresse email invalide');
+      }
+
+      // Créer un FormData pour envoyer les fichiers
+      const formDataToSend = new FormData();
+      formDataToSend.append('firstName', formData.firstName.trim());
+      formDataToSend.append('lastName', formData.lastName.trim());
+      formDataToSend.append('email', formData.email.trim());
+      if (formData.phone) {
+        formDataToSend.append('phone', formData.phone.trim());
+      }
+      
+      if (avatarFile) {
+        formDataToSend.append('avatar', avatarFile);
+      }
+
+      const response = await api.put('/users/me', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
+      });
+
       setSuccessMessage('Profil mis à jour avec succès !');
       toast.success('Profil mis à jour avec succès !');
+      
+      // Réinitialiser l'avatar preview et file
+      setAvatarFile(null);
+      setAvatarPreview(null);
+      
+      // // Mettre à jour le contexte utilisateur
+      // if (setUser) {
+      //   setUser(response.data);
+      // }
+
+      // // Mettre à jour le localStorage
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      localStorage.setItem('user', JSON.stringify({ ...currentUser, ...response.data }));
+
+      // Recharger la page après 1.5 secondes
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+      
+    } catch (error: any) {
+      const message = error.response?.data?.error || error.message || 'Erreur lors de la mise à jour du profil';
+      setErrorMessage(message);
+      toast.error(message);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -87,12 +200,30 @@ function ProfilSection({ user }: any) {
           
           <div className="flex items-center gap-6">
             <div className="relative group">
-              <div className="w-28 h-28 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-xl">
-                {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
-              </div>
-              <button className="absolute bottom-0 right-0 p-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 shadow-lg transition-all hover:scale-110">
+              {avatarPreview || user?.avatar ? (
+                <img 
+                  src={avatarPreview || `http://localhost:3000${user?.avatar}`}
+                  alt="Avatar"
+                  className="w-28 h-28 rounded-2xl object-cover shadow-xl"
+                />
+              ) : (
+                <div className="w-28 h-28 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-xl">
+                  {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                </div>
+              )}
+              <label 
+                htmlFor="avatar-upload"
+                className="absolute bottom-0 right-0 p-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 shadow-lg transition-all hover:scale-110 cursor-pointer"
+              >
                 <Upload className="w-4 h-4" />
-              </button>
+                <input 
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+              </label>
             </div>
             
             <div className="flex-1">
@@ -131,7 +262,8 @@ function ProfilSection({ user }: any) {
               </label>
               <input
                 type="text"
-                defaultValue={user?.firstName}
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 placeholder="Entrez votre prénom"
               />
@@ -143,7 +275,8 @@ function ProfilSection({ user }: any) {
               </label>
               <input
                 type="text"
-                defaultValue={user?.lastName}
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 placeholder="Entrez votre nom"
               />
@@ -155,7 +288,8 @@ function ProfilSection({ user }: any) {
               </label>
               <input
                 type="email"
-                defaultValue={user?.email}
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 placeholder="email@exemple.com"
               />
@@ -167,6 +301,8 @@ function ProfilSection({ user }: any) {
               </label>
               <input
                 type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="+261 34 00 000 00"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               />
@@ -177,15 +313,24 @@ function ProfilSection({ user }: any) {
         {/* Actions */}
         <div className="flex items-center justify-between pt-6 border-t border-gray-200">
           <p className="text-sm text-gray-600">
-            Dernière mise à jour : {new Date().toLocaleDateString('fr-FR')}
+            Dernière mise à jour : {user?.updatedAt ? new Date(user.updatedAt).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR')}
           </p>
           <button 
             onClick={handleSave}
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/30 transition-all hover:scale-105 disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/30 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save className="w-4 h-4" />
-            Enregistrer les modifications
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Enregistrement...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Enregistrer les modifications
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -194,118 +339,382 @@ function ProfilSection({ user }: any) {
 }
 
 // ============================================
-// SECTION ENTREPRISE
+// SECTION ENTREPRISE (Corrigée)
 // ============================================
 function EntrepriseSection() {
-  const [loading, setLoading] = useState(false);
+  const { currentCompany } = useAuth();
+  const {
+    isOwner,
+    canEditOrganization,
+    canDeleteOrganization
+  } = usePermissions();
+
+  const [formData, setFormData] = useState({
+    name: currentCompany?.name || '',
+    email: currentCompany?.email || '',
+    phone: currentCompany?.phone || '',
+    address: currentCompany?.address || '',
+    taxId: currentCompany?.taxId || '',
+    logo: null as File | null
+  });
+
+  // ✅ Mettre à jour le state quand currentCompany change
+  useEffect(() => {
+    if (currentCompany) {
+      console.log('📊 Current Company Data:', currentCompany); // Debug
+      setFormData({
+        name: currentCompany.name || '',
+        email: currentCompany.email || '',
+        phone: currentCompany.phone || '',
+        address: currentCompany.address || '',
+        taxId: currentCompany.taxId || '',
+        logo: null
+      });
+    }
+  }, [currentCompany]);
+
+  const [logoPreview, setLogoPreview] = useState<string>(currentCompany?.logo || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setError('Le logo ne doit pas dépasser 2MB');
+        toast.error('Le logo ne doit pas dépasser 2MB');
+        return;
+      }
+      setFormData({ ...formData, logo: file });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!canEditOrganization()) {
+      setError('Vous n\'avez pas les permissions pour modifier cette organisation');
+      toast.error('Permissions insuffisantes');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      if (formData.email) formDataToSend.append('email', formData.email);
+      if (formData.phone) formDataToSend.append('phone', formData.phone);
+      if (formData.address) formDataToSend.append('address', formData.address);
+      if (formData.taxId) formDataToSend.append('taxId', formData.taxId);
+      if (formData.logo) formDataToSend.append('logo', formData.logo);
+
+      await api.put(`/companies/${currentCompany?.id}`, formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      // Recharger les données utilisateur
+      const userResponse = await api.get('/auth/me');
+      localStorage.setItem('user', JSON.stringify(userResponse.data));
+
+      setSuccess('Organisation mise à jour avec succès !');
+      toast.success('Organisation mise à jour avec succès !');
+      setFormData({ ...formData, logo: null });
+      
+      // Recharger la page après 1.5 secondes
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Une erreur est survenue';
+      setError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteOrganization = async () => {
+    if (!canDeleteOrganization()) {
+      setError('Seul le propriétaire peut supprimer l\'organisation');
+      toast.error('Permissions insuffisantes');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await api.delete(`/companies/${currentCompany?.id}`);
+      toast.success('Organisation supprimée avec succès');
+      
+      // Rediriger vers la page de connexion
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1000);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Une erreur est survenue';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!currentCompany) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-12 text-center">
+        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <p className="text-gray-500">Chargement des informations de l'organisation...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
-            <Building2 className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Informations de l'entreprise</h2>
-            <p className="text-sm text-gray-600">Gérez les détails de votre organisation</p>
+    <div className="space-y-6">
+      {/* Main Settings */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
+                <Building2 className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Informations de l'entreprise</h2>
+                <p className="text-sm text-gray-600">Gérez les détails de votre organisation</p>
+              </div>
+            </div>
+            {isOwner() && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <Crown className="w-4 h-4 text-yellow-600" />
+                <span className="text-sm font-medium text-yellow-700">Propriétaire</span>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Messages */}
+        {error && (
+          <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
+
+        {success && (
+          <div className="mx-6 mt-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-600" />
+            <p className="text-sm text-green-700">{success}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="p-6">
+          {/* Logo Upload */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <div className="w-1 h-5 bg-purple-600 rounded"></div>
+              Logo de l'entreprise
+            </h3>
+            
+            <div className="flex items-center gap-6">
+              <div className="w-24 h-24 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <Building2 className="w-10 h-10 text-gray-400" />
+                )}
+              </div>
+              {canEditOrganization() && (
+                <label className="flex-1 cursor-pointer">
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-purple-500 transition-colors">
+                    <Upload className="w-5 h-5 text-gray-400 mx-auto mb-1" />
+                    <p className="text-sm text-gray-600">Cliquer pour modifier</p>
+                    <p className="text-xs text-gray-400 mt-1">PNG, JPG (max 2MB)</p>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    onChange={handleLogoChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Form Fields */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <div className="w-1 h-5 bg-purple-600 rounded"></div>
+              Détails de l'entreprise
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom de l'entreprise <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-500"
+                  disabled={!canEditOrganization()}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Numéro fiscal (NIF)
+                </label>
+                <input
+                  type="text"
+                  value={formData.taxId}
+                  onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
+                  placeholder="0000000000000"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-500"
+                  disabled={!canEditOrganization()}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  E-mail
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="contact@entreprise.mg"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-500"
+                  disabled={!canEditOrganization()}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Adresse
+                </label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="Antananarivo, Madagascar"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-500"
+                  disabled={!canEditOrganization()}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Téléphone
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="+261 20 00 000 00"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-50 disabled:text-gray-500"
+                  disabled={!canEditOrganization()}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          {canEditOrganization() && (
+            <div className="flex justify-end pt-6 border-t border-gray-200">
+              <button 
+                type="submit"
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 shadow-lg shadow-purple-500/30 transition-all hover:scale-105 disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" />
+                {isSubmitting ? 'Enregistrement...' : 'Enregistrer les modifications'}
+              </button>
+            </div>
+          )}
+
+          {!canEditOrganization() && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex gap-3">
+              <AlertCircle className="w-5 h-5 text-gray-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Permissions limitées</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Vous ne pouvez pas modifier ces paramètres. Contactez un administrateur ou le propriétaire de l'organisation.
+                </p>
+              </div>
+            </div>
+          )}
+        </form>
       </div>
 
-      <div className="p-6">
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <div className="w-1 h-5 bg-purple-600 rounded"></div>
-            Détails de l'entreprise
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nom de l'entreprise <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                defaultValue="SHOP RAPHIA"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-              />
-            </div>
+      {/* Danger Zone */}
+      {canDeleteOrganization() && (
+        <div className="bg-white rounded-xl shadow-lg border border-red-200 p-6">
+          <h2 className="text-lg font-semibold text-red-900 mb-2 flex items-center gap-2">
+            <AlertCircle className="w-5 h-5" />
+            Zone dangereuse
+          </h2>
+          <p className="text-sm text-gray-600 mb-4">
+            La suppression de l'organisation est irréversible. Toutes les données seront perdues.
+          </p>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Numéro fiscal (NIF)
-              </label>
-              <input
-                type="text"
-                placeholder="0000000000000"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-              />
+          {!showDeleteConfirm ? (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Supprimer l'organisation
+            </button>
+          ) : (
+            <div className="bg-red-50 rounded-lg p-4 space-y-3">
+              <p className="text-sm font-medium text-red-900">
+                Êtes-vous absolument sûr ?
+              </p>
+              <p className="text-sm text-red-700">
+                Cette action ne peut pas être annulée. Toutes les factures, partenaires, 
+                et données associées seront définitivement supprimées.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleDeleteOrganization}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Suppression...' : 'Oui, supprimer'}
+                </button>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Numéro STAT
-              </label>
-              <input
-                type="text"
-                placeholder="00000000000000"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Adresse
-              </label>
-              <input
-                type="text"
-                placeholder="Antananarivo, Madagascar"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                E-mail
-              </label>
-              <input
-                type="email"
-                placeholder="contact@entreprise.mg"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Téléphone
-              </label>
-              <input
-                type="tel"
-                placeholder="+261 20 00 000 00"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-              />
-            </div>
-          </div>
+          )}
         </div>
-
-        <div className="flex justify-end pt-6 border-t border-gray-200">
-          <button 
-            disabled={loading}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 shadow-lg shadow-purple-500/30 transition-all hover:scale-105"
-          >
-            <Save className="w-4 h-4" />
-            Enregistrer les modifications
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
-// ============================================
-// SECTION UTILISATEURS
-// ============================================
+// Les autres sections restent inchangées...
+// (Je les inclus pour que le fichier soit complet)
+
 function UtilisateursSection() {
   const utilisateurs = [
     { name: 'Jean Rakoto', email: 'jean@example.mg', role: 'Admin', status: 'Actif', avatar: 'JR' },
@@ -376,9 +785,6 @@ function UtilisateursSection() {
   );
 }
 
-// ============================================
-// SECTION PERMISSIONS
-// ============================================
 function PermissionsSection() {
   const permissions = [
     { module: 'Facturation', view: true, create: true, edit: true, delete: false },
@@ -469,14 +875,44 @@ function PermissionsSection() {
   );
 }
 
-// ============================================
-// SECTION ABONNEMENT
-// ============================================
 function AbonnementSection() {
+  const { subscription } = useAuth();
+  const { getPlanLimits, getLimitUsage } = usePermissions();
+  
+  const limits = getPlanLimits();
+  const userUsage = getLimitUsage('users');
+  const articleUsage = getLimitUsage('articles');
+  const invoiceUsage = getLimitUsage('invoices');
+
   const plans = [
-    { name: 'Démarrage', price: '7', currency: '€', users: 5, features: ['Factures illimitées', 'Support par e-mail', 'Application mobile'], color: 'blue' },
-    { name: 'Professionnel', price: '19', currency: '€', users: 25, features: ['Analyses avancées', 'Support prioritaire', 'Accès API'], color: 'purple', popular: true },
-    { name: 'Entreprise', price: 'Sur devis', currency: '', users: '∞', features: ['Développement personnalisé', 'Support dédié', 'Garantie SLA'], color: 'orange' },
+    { 
+      name: 'Démarrage', 
+      price: '7', 
+      currency: '€', 
+      users: 5, 
+      features: ['Factures illimitées', 'Support par e-mail', 'Application mobile'], 
+      color: 'blue',
+      plan: 'STARTER' 
+    },
+    { 
+      name: 'Professionnel', 
+      price: '19', 
+      currency: '€', 
+      users: 25, 
+      features: ['Analyses avancées', 'Support prioritaire', 'Accès API'], 
+      color: 'purple', 
+      popular: true,
+      plan: 'PROFESSIONAL'
+    },
+    { 
+      name: 'Entreprise', 
+      price: 'Sur devis', 
+      currency: '', 
+      users: '∞', 
+      features: ['Développement personnalisé', 'Support dédié', 'Garantie SLA'], 
+      color: 'orange',
+      plan: 'ENTERPRISE'
+    },
   ];
 
   return (
@@ -487,33 +923,47 @@ function AbonnementSection() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <Crown className="w-6 h-6 text-yellow-400" />
-              <h2 className="text-2xl font-bold">Plan Gratuit</h2>
+              <h2 className="text-2xl font-bold">Plan {subscription?.plan || 'STARTER'}</h2>
             </div>
-            <p className="text-gray-300">Essai gratuit jusqu'au 19 avril 2026</p>
+            <p className="text-gray-300">
+              {subscription?.status === 'TRIAL' ? 'Essai gratuit' : 'Actif'}
+            </p>
           </div>
-          <span className="px-4 py-2 bg-yellow-500 text-gray-900 rounded-xl font-bold text-sm shadow-lg">
-            MODE TEST
+          <span className={`px-4 py-2 rounded-xl font-bold text-sm shadow-lg ${
+            subscription?.status === 'TRIAL' 
+              ? 'bg-yellow-500 text-gray-900' 
+              : 'bg-green-500 text-white'
+          }`}>
+            {subscription?.status || 'MODE TEST'}
           </span>
         </div>
 
         <div className="grid grid-cols-3 gap-6 p-6 bg-white/10 backdrop-blur-sm rounded-xl">
           <div>
             <p className="text-gray-300 text-sm mb-1">Utilisateurs</p>
-            <p className="text-3xl font-bold">3 / 3</p>
+            <p className="text-3xl font-bold">
+              {userUsage?.current || 0} / {userUsage?.max === -1 ? '∞' : userUsage?.max || 5}
+            </p>
           </div>
           <div>
-            <p className="text-gray-300 text-sm mb-1">Produits</p>
-            <p className="text-3xl font-bold">33 / 100</p>
+            <p className="text-gray-300 text-sm mb-1">Articles</p>
+            <p className="text-3xl font-bold">
+              {articleUsage?.current || 0} / {articleUsage?.max === -1 ? '∞' : articleUsage?.max || 100}
+            </p>
           </div>
           <div>
             <p className="text-gray-300 text-sm mb-1">Factures / mois</p>
-            <p className="text-3xl font-bold">5 / 50</p>
+            <p className="text-3xl font-bold">
+              {invoiceUsage?.current || 0} / {invoiceUsage?.max === -1 ? '∞' : invoiceUsage?.max || 50}
+            </p>
           </div>
         </div>
 
-        <button className="mt-6 w-full py-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-gray-900 rounded-xl font-bold hover:shadow-2xl transition-all hover:scale-105 shadow-lg">
-          Passer à la version Premium
-        </button>
+        {subscription?.plan !== 'ENTERPRISE' && (
+          <button className="mt-6 w-full py-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-gray-900 rounded-xl font-bold hover:shadow-2xl transition-all hover:scale-105 shadow-lg">
+            Passer à la version Premium
+          </button>
+        )}
       </div>
 
       {/* Available Plans */}
@@ -552,12 +1002,17 @@ function AbonnementSection() {
                   </li>
                 ))}
               </ul>
-              <button className={`w-full py-3 rounded-xl font-semibold transition-all ${
-                plan.popular
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl hover:scale-105'
-                  : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-              }`}>
-                Choisir ce plan
+              <button 
+                className={`w-full py-3 rounded-xl font-semibold transition-all ${
+                  subscription?.plan === plan.plan
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : plan.popular
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl hover:scale-105'
+                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                }`}
+                disabled={subscription?.plan === plan.plan}
+              >
+                {subscription?.plan === plan.plan ? 'Plan actuel' : 'Choisir ce plan'}
               </button>
             </div>
           ))}
@@ -567,9 +1022,6 @@ function AbonnementSection() {
   );
 }
 
-// ============================================
-// SECTION NOTIFICATIONS
-// ============================================
 function NotificationsSection() {
   const notifications = [
     { title: 'Alertes stock bas', desc: 'Soyez notifié quand un produit atteint le stock minimum', icon: AlertCircle },
@@ -620,9 +1072,6 @@ function NotificationsSection() {
   );
 }
 
-// ============================================
-// SECTION THEME
-// ============================================
 function ThemeSection() {
   const colors = [
     { name: 'Violet', value: '#7e22ce', module: 'Facturation' },
@@ -689,9 +1138,6 @@ function ThemeSection() {
   );
 }
 
-// ============================================
-// SECTION SÉCURITÉ
-// ============================================
 function SecuriteSection() {
   return (
     <div className="space-y-6">

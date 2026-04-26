@@ -38,6 +38,7 @@ import PartnerForm from './pages/form/PartnerForm';
 import MessagesDashboard from './pages/modules/MessagesDashboard';
 import NotificationsDashboard from './pages/modules/NotificationsDashboard';
 import PartenairePage from './pages/PartenairePage';
+import NotFoundPage from './components/common/NotFoundPage';
 
 
 export default function App() {
@@ -63,8 +64,6 @@ export default function App() {
               <Route path="/app/messages" element={<MessagesDashboard />} />
               <Route path="/app/notifications" element={<NotificationsDashboard />} />
 
-              <Route path="/app/article" element={<ArticlesPage />} />
-              <Route path="/app/article/new" element={<ArticleForm />} />
               {/* MODULE FACTURATION - VIOLET */}
               <Route path="/app/facturation" element={<FacturationDashboard />} />
               <Route path="/app/facturation/devis" element={<div className="p-6">Page Devis (à créer)</div>} />
@@ -74,6 +73,15 @@ export default function App() {
               <Route path="/app/facturation/articles/new" element={<ArticleForm />} />
               <Route path="/app/facturation/achats" element={<div className="p-6">Page Achats (à créer)</div>} />
               <Route path="/app/facturation/frais" element={<div className="p-6">Page Frais (à créer)</div>} />
+
+              // Dans vos routes
+              <Route path="/app/facturation/articles">
+                <Route index element={<ArticlesPage />} />
+                <Route path="new" element={<ArticleForm />} />
+                <Route path=":id" element={<ArticleForm />} />
+                <Route path=":id/edit" element={<ArticleForm />} />
+                <Route path=":id/duplicate" element={<ArticleForm />} />
+              </Route>
               
               {/* MODULE PARTENAIRES - BLEU */}
               <Route path="/app/partenaires" element={<PartenairesDashboard />} />
@@ -125,15 +133,7 @@ export default function App() {
 
             {/* 404 - Page non trouvée */}
             <Route path="*" element={
-              <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                  <h1 className="text-6xl font-bold text-gray-800 mb-4">404</h1>
-                  <p className="text-xl text-gray-600 mb-8">Page non trouvée</p>
-                  <a href="/" className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                    Retour à l'accueil
-                  </a>
-                </div>
-              </div>
+              <NotFoundPage/>
             } />
           </Routes>
         </SocketProvider>

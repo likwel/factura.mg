@@ -99,6 +99,7 @@ router.post('/login', async (req, res) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        phone: user.phone,
         avatar: user.avatar,
         defaultCompanyId: user.defaultCompanyId,
         currentPlan: user.currentPlan,
@@ -116,6 +117,8 @@ router.post('/login', async (req, res) => {
             id: m.company.id,
             name: m.company.name,
             email: m.company.email,
+            address: m.company.address,
+            phone: m.company.phone,
             logo: m.company.logo,
             ownerId: m.company.ownerId,
             owner: m.company.owner
@@ -404,6 +407,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Endpoint /auth/me pour vérifier le token
+
 router.get('/me', async (req, res) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
@@ -475,6 +479,7 @@ router.get('/me', async (req, res) => {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,  // ✅ Ajouté
       avatar: user.avatar,
       defaultCompanyId: user.defaultCompanyId,
       currentPlan: effectivePlan,
@@ -492,6 +497,9 @@ router.get('/me', async (req, res) => {
           id: m.company.id,
           name: m.company.name,
           email: m.company.email,
+          phone: m.company.phone,      // ✅ Ajouté
+          address: m.company.address,  // ✅ Ajouté
+          taxId: m.company.taxId,      // ✅ Ajouté
           logo: m.company.logo,
           ownerId: m.company.ownerId,
           owner: m.company.owner
