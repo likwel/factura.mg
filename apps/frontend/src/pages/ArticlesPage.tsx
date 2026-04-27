@@ -170,7 +170,7 @@ export default function ArticlesPage() {
   return (
     <div className="h-screen">
       {error && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 text-sm border-b border-red-200">
+        <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 text-sm border border-red-200 rounded-lg mb-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
           {error}
         </div>

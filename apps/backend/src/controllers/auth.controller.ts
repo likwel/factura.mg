@@ -168,6 +168,15 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Cet email est déjà utilisé' });
     }
 
+    // ── DÉTERMINATION DU RÔLE ──
+    const userCount = await prisma.user.count();
+    const isSuperAdmin = userCount === 0;
+    const userRole = isSuperAdmin ? 'SUPER_ADMIN' : companyName ? 'ADMIN' : 'EMPLOYEE';
+    const currentPlan = isSuperAdmin ? 'ENTERPRISE' : 'STARTER';
+    const subscriptionStatus = isSuperAdmin ? 'ACTIVE' : 'TRIAL';
+
+    console.log(`👤 Role assigned: ${userRole} (total users before insert: ${userCount})`);
+
     const hashedPassword = await bcrypt.hash(password, 10);
     
     // ── MODE 1: CRÉER UNE NOUVELLE COMPANY ──
@@ -180,8 +189,9 @@ router.post('/register', async (req, res) => {
           password: hashedPassword,
           firstName,
           lastName,
-          currentPlan: 'STARTER',
-          subscriptionStatus: 'TRIAL',
+          role: userRole,           // 'SUPER_ADMIN' ou 'ADMIN'
+          currentPlan: currentPlan,
+          subscriptionStatus: subscriptionStatus,
           maxUsers: 5,
           maxArticles: 1000,
           maxInvoices: 1000,
@@ -246,6 +256,7 @@ router.post('/register', async (req, res) => {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
+          role: user.role,
           avatar: user.avatar,
           defaultCompanyId: company.id,
           currentPlan: user.currentPlan,
@@ -312,7 +323,6 @@ router.post('/register', async (req, res) => {
         return res.status(404).json({ error: 'Entreprise non trouvée' });
       }
 
-      // ✅ Valeurs par défaut si le owner n'a pas de plan (ne devrait pas arriver)
       const ownerMaxUsers = company.owner.maxUsers ?? 5;
       const ownerMaxArticles = company.owner.maxArticles ?? 1000;
       const ownerMaxInvoices = company.owner.maxInvoices ?? 1000;
@@ -333,6 +343,7 @@ router.post('/register', async (req, res) => {
           password: hashedPassword,
           firstName,
           lastName,
+          role: userRole,           // 'EMPLOYEE'
           currentPlan: null,
           subscriptionStatus: null,
           maxUsers: null,
@@ -375,6 +386,7 @@ router.post('/register', async (req, res) => {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
+          role: user.role,
           avatar: user.avatar,
           defaultCompanyId: company.id,
           currentPlan: ownerPlan,

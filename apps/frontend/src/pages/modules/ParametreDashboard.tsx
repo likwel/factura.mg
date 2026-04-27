@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import NumberingConfigForm from '../form/NumberingConfigForm';
 
 interface ParametreDashboardProps {
   id?: string;
@@ -28,6 +29,7 @@ export default function ParametreDashboard({ id = 'profil' }: ParametreDashboard
       {id === 'notifications' && <NotificationsSection />}
       {id === 'theme' && <ThemeSection />}
       {id === 'securite' && <SecuriteSection />}
+      {id === 'numerotation' && <NumberingConfigForm />}
     </div>
   );
 }

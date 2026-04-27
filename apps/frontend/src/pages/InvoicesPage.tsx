@@ -97,12 +97,12 @@ export default function InvoicesPage() {
     {
       label: 'Voir',
       icon: <Eye className="w-4 h-4" />,
-      onClick: (invoice) => navigate(`/invoices/${invoice.id}`),
+      onClick: (invoice) => navigate(`/app/facturation/factures/${invoice.id}`),
     },
     {
       label: 'Modifier',
       icon: <Edit className="w-4 h-4" />,
-      onClick: (invoice) => navigate(`/invoices/${invoice.id}/edit`),
+      onClick: (invoice) => navigate(`/app/facturation/factures/${invoice.id}/edit`),
     },
     {
       label: 'Envoyer',
@@ -136,7 +136,7 @@ export default function InvoicesPage() {
     <div className="h-screen">
       {/* Bandeau d'erreur non bloquant */}
       {error && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 text-sm border-b border-red-200">
+        <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 text-sm border border-red-200 rounded-lg mb-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
           {error}
         </div>
@@ -147,7 +147,7 @@ export default function InvoicesPage() {
         description="Gérez vos factures simplement"
         createButtonColor ="purple"
         createLabel="Créer facture"
-        onCreateClick={() => navigate('/invoices/new')}
+        onCreateClick={() => navigate('/app/facturation/factures/new')}
         onRefresh={refresh}
 
         data={tableData as InvoiceRow[]}

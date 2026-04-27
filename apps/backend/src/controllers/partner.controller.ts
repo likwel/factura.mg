@@ -142,8 +142,12 @@ router.get('/', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: A
 });
 
 // GET /api/partners/clients - Liste uniquement les clients
-router.get('/clients', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
+router.get('/clients', authenticate, authorize(Permission.VIEW_PARTNERS, Permission.VIEW_SUPPLIERS), async (req: AuthRequest, res) => {
   try {
+    
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
     const companyId = req.user!.companyId;
 
     const clients = await prisma.client.findMany({
@@ -164,6 +168,10 @@ router.get('/clients', authenticate, authorize(Permission.VIEW_PARTNERS), async 
 // GET /api/partners/fournisseurs - Liste uniquement les fournisseurs
 router.get('/fournisseurs', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
   try {
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
     const companyId = req.user!.companyId;
 
     const suppliers = await prisma.supplier.findMany({
@@ -184,6 +192,11 @@ router.get('/fournisseurs', authenticate, authorize(Permission.VIEW_PARTNERS), a
 // GET /api/partners/:id - Détail d'un partenaire (client ou fournisseur)
 router.get('/:id', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
   try {
+
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
     const { id } = req.params;
     const companyId = req.user!.companyId;
 
@@ -249,6 +262,10 @@ router.post('/', authenticate, authorize(Permission.CREATE_PARTNERS), async (req
       creditLimit,
       type, // 'client' ou 'supplier'
     } = req.body;
+
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
 
     const companyId = req.user!.companyId;
 
@@ -341,6 +358,10 @@ router.put('/:id', authenticate, authorize(Permission.EDIT_PARTNERS), async (req
       creditLimit,
       isActive,
     } = req.body;
+
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
 
     const companyId = req.user!.companyId;
 
@@ -435,6 +456,11 @@ router.put('/:id', authenticate, authorize(Permission.EDIT_PARTNERS), async (req
 // DELETE /api/partners/:id - Supprimer un partenaire
 router.delete('/:id', authenticate, authorize(Permission.DELETE_PARTNERS), async (req: AuthRequest, res) => {
   try {
+
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
     const { id } = req.params;
     const companyId = req.user!.companyId;
 
@@ -510,6 +536,11 @@ router.delete('/:id', authenticate, authorize(Permission.DELETE_PARTNERS), async
 // GET /api/clients/stats - Statistiques des clients
 router.get('/clients/stats', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
   try {
+
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
     const companyId = req.user!.companyId;
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -578,6 +609,11 @@ router.get('/clients/stats', authenticate, authorize(Permission.VIEW_PARTNERS), 
 // GET /api/fournisseurs/stats - Statistiques des fournisseurs
 router.get('/fournisseurs/stats', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
   try {
+
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
     const companyId = req.user!.companyId;
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -641,6 +677,11 @@ router.get('/fournisseurs/stats', authenticate, authorize(Permission.VIEW_PARTNE
 // GET /api/clients/top - Top clients
 router.get('/clients/top', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
   try {
+
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
     const companyId = req.user!.companyId;
     const { limit = '5' } = req.query;
     const limitNum = parseInt(limit as string);
@@ -689,6 +730,11 @@ router.get('/clients/top', authenticate, authorize(Permission.VIEW_PARTNERS), as
 // GET /api/fournisseurs/top - Top fournisseurs
 router.get('/fournisseurs/top', authenticate, authorize(Permission.VIEW_PARTNERS), async (req: AuthRequest, res) => {
   try {
+
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
     const companyId = req.user!.companyId;
     const { limit = '5' } = req.query;
     const limitNum = parseInt(limit as string);
@@ -737,6 +783,11 @@ router.get('/fournisseurs/top', authenticate, authorize(Permission.VIEW_PARTNERS
 // PATCH /api/clients/bulk-update - Mise à jour en masse des clients
 router.patch('/clients/bulk-update', authenticate, authorize(Permission.EDIT_PARTNERS), async (req: AuthRequest, res) => {
   try {
+
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
     const { ids, isActive } = req.body;
     const companyId = req.user!.companyId;
 
@@ -773,6 +824,11 @@ router.patch('/clients/bulk-update', authenticate, authorize(Permission.EDIT_PAR
 // PATCH /api/fournisseurs/bulk-update - Mise à jour en masse des fournisseurs
 router.patch('/fournisseurs/bulk-update', authenticate, authorize(Permission.EDIT_PARTNERS), async (req: AuthRequest, res) => {
   try {
+
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
     const { ids, isActive } = req.body;
     const companyId = req.user!.companyId;
 
@@ -809,6 +865,11 @@ router.patch('/fournisseurs/bulk-update', authenticate, authorize(Permission.EDI
 // DELETE /api/clients/bulk-delete - Suppression en masse des clients
 router.delete('/clients/bulk-delete', authenticate, authorize(Permission.DELETE_PARTNERS), async (req: AuthRequest, res) => {
   try {
+
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+
     const { ids } = req.body;
     const companyId = req.user!.companyId;
 
@@ -862,6 +923,11 @@ router.delete('/clients/bulk-delete', authenticate, authorize(Permission.DELETE_
 // DELETE /api/fournisseurs/bulk-delete - Suppression en masse des fournisseurs
 router.delete('/fournisseurs/bulk-delete', authenticate, authorize(Permission.DELETE_PARTNERS), async (req: AuthRequest, res) => {
   try {
+
+    if (!req.user?.companyId) {
+      return res.status(400).json({ message: 'Company ID manquant' });
+    }
+    
     const { ids } = req.body;
     const companyId = req.user!.companyId;
 

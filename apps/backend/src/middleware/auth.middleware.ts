@@ -147,6 +147,8 @@ export const authorize = (...permissions: (Permission | string)[]) => {
       return;
     }
 
+    console.log(user.permissions)
+
     // Vérifier permissions custom
     const userPermissions: string[] = Array.isArray(user.permissions)
       ? (user.permissions as string[])

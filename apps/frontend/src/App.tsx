@@ -39,6 +39,7 @@ import MessagesDashboard from './pages/modules/MessagesDashboard';
 import NotificationsDashboard from './pages/modules/NotificationsDashboard';
 import PartenairePage from './pages/PartenairePage';
 import NotFoundPage from './components/common/NotFoundPage';
+import InvoiceForm from './pages/form/InvoiceForm';
 
 
 export default function App() {
@@ -69,12 +70,12 @@ export default function App() {
               <Route path="/app/facturation/devis" element={<div className="p-6">Page Devis (à créer)</div>} />
               <Route path="/app/facturation/recurrentes" element={<div className="p-6">Page Recurrents (à créer)</div>} />
               <Route path="/app/facturation/factures" element={<InvoicesPage />} />
+              <Route path="/app/facturation/factures/new" element={<InvoiceForm />} />
               <Route path="/app/facturation/articles" element={<ArticlesPage />} />
               <Route path="/app/facturation/articles/new" element={<ArticleForm />} />
               <Route path="/app/facturation/achats" element={<div className="p-6">Page Achats (à créer)</div>} />
               <Route path="/app/facturation/frais" element={<div className="p-6">Page Frais (à créer)</div>} />
 
-              // Dans vos routes
               <Route path="/app/facturation/articles">
                 <Route index element={<ArticlesPage />} />
                 <Route path="new" element={<ArticleForm />} />
@@ -127,6 +128,7 @@ export default function App() {
               <Route path="/app/parametre/permissions" element={<ParametreDashboard id='permissions' />} />
               <Route path="/app/parametre/abonnement" element={<ParametreDashboard id='abonnement' />} />
               <Route path="/app/parametre/theme" element={<ParametreDashboard id='theme' />} />
+              <Route path="/app/parametre/numerotation" element={<ParametreDashboard id='numerotation' />} />
               <Route path="/app/parametre/notifications" element={<ParametreDashboard id='notifications' />} />
               
             </Route>

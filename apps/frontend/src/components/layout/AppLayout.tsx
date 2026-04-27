@@ -130,7 +130,7 @@ export default function AppLayout() {
         navColor={currentTheme.navColor}
         messages={sampleMessages}
         notifications={sampleNotifications}
-        onCreateOrganization={() => console.log('Create new organization')}
+        // onCreateOrganization={() => console.log('Create new organization')}
       />
 
       <div className="flex h-[calc(100vh-64px)]">
@@ -141,7 +141,7 @@ export default function AppLayout() {
         />
 
         <main className="flex-1 overflow-y-auto">
-          <div className="p-6">
+          <div className="p-3">
             {/* Notification Banner - Optionnel */}
             {/* <NotificationBanner
               message="Vous utilisez actuellement la version d'essai"

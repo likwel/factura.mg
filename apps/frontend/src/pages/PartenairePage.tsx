@@ -1,7 +1,7 @@
 // apps/frontend/src/pages/modules/partenaires/PartenairePage.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Phone, MapPin, Eye, Edit, Trash2, FileDown, Users } from 'lucide-react';
+import { Mail, Phone, MapPin, Eye, Edit, Trash2, FileDown, Users, AlertCircle } from 'lucide-react';
 import { DataTable, Column, TableAction, BulkAction } from '../components/common/DataTable';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -37,6 +37,7 @@ export default function PartenairePage({ type }: PartenairePageProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadClients();
@@ -64,9 +65,12 @@ export default function PartenairePage({ type }: PartenairePageProps) {
       
       setClients(data);
       setTotalPages(response.data?.totalPages || Math.ceil(data.length / pageSize));
+      setError(null)
     } catch (error) {
       console.error('Erreur de chargement:', error);
       toast.error('Erreur de chargement des données');
+      const axiosError = error as import('axios').AxiosError<{ message: string }>;
+      setError(axiosError?.response?.data?.message ?? 'Erreur de chargement');
       setClients([]);
     } finally {
       setLoading(false);
@@ -251,7 +255,15 @@ export default function PartenairePage({ type }: PartenairePageProps) {
   ];
 
   return (
-    <div className="space-y-6 h-screen">
+    <div className="h-screen">
+
+       {error && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 text-sm border border-red-200 rounded-lg mb-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
       <DataTable
         title={type === 'client' ? 'Clients' : 'Fournisseurs'}
         description={`Gérez vos ${type}s et leurs informations`}

@@ -18,7 +18,8 @@ import {
   ShoppingBag,
   Boxes,
   MapPin,
-  FileSpreadsheet } from 'lucide-react';
+  FileSpreadsheet, 
+  Settings2} from 'lucide-react';
 
 import { getModuleColor, moduleThemes } from '../shared/moduleThemes';
 import type { ModuleKey } from '../shared/moduleThemes';
@@ -93,7 +94,7 @@ const moduleMenus: ModuleMenus = {
     { name: 'Messages', path: '/app/parametre/messages', icon: MessagesSquare },
     { name: 'Sécurité', path: '/app/parametre/securite', icon: Shield },
     { name: 'Apparence', path: '/app/parametre/theme', icon: Palette },
-    { name: 'Langue', path: '/app/parametre/langue', icon: Globe },
+    { name: 'Numérotation', path: '/app/parametre/numerotation', icon: Settings2 },
   ],
   messages: [
     { name: 'Tableau de bord', path: '/app/messages', icon: LayoutDashboard, exact: true },
