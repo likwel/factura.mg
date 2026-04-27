@@ -291,7 +291,7 @@ export default function ModuleSidebar({
         </button>
 
         {/* Menu Items */}
-        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto overflow-x-hidden">
           {menuItems.map((item, index) => {
             const Icon = item.icon;
             const hasAddButton = item.hasAdd === true;
@@ -467,16 +467,16 @@ export default function ModuleSidebar({
             </div>
           </div>
         ) : (
-          <div className="px-3 py-3 border-t border-gray-200">
+          <div className="px-3 py-2 border-t border-gray-200">
             <div className="flex flex-col items-center gap-2">
               {subscription?.isOwner && (
-                <div className="relative group">
+                <div className="relative group p-1"> {/* p-1 pour laisser de l'espace au badge */}
                   <NavLink
                     to="/app/parametre/abonnement"
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300 relative"
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300 relative block overflow-visible"
                   >
                     <Download className="w-4 h-4 text-gray-600" />
-                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3"> {/* légèrement décalé */}
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
                     </span>
