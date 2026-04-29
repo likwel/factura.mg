@@ -71,6 +71,102 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
+
+// Récupérer le profil de l'utilisateur connecté
+router.get('/company', authenticate, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const companyId = req.user?.companyId;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Non authentifié' });
+      }
+
+      if (!companyId) {
+        return res.status(403).json({ error: 'Vous devez être associé à une entreprise' });
+      }
+
+      // Essayer différentes approches selon votre modèle Prisma
+      let users;
+      
+      try {
+        // Approche 1 : companyId comme champ direct
+        users = await prisma.user.findMany({
+          where: {
+            companyId: companyId,
+            isActive: true,
+            id: { not: userId }
+          },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          },
+          orderBy: [
+            { firstName: 'asc' },
+            { lastName: 'asc' }
+          ]
+        });
+      } catch (error) {
+        // Si companyId n'existe pas, essayer avec une relation
+        try {
+          // Approche 2 : company comme relation
+          users = await prisma.user.findMany({
+            where: {
+              company: {
+                id: companyId
+              },
+              isActive: true,
+              id: { not: userId }
+            },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            },
+            orderBy: [
+              { firstName: 'asc' },
+              { lastName: 'asc' }
+            ]
+          });
+        } catch (error2) {
+          // Si ça ne marche toujours pas, retourner tous les utilisateurs actifs
+          console.warn('Could not filter by company, returning all active users');
+          users = await prisma.user.findMany({
+            where: {
+              isActive: true,
+              id: { not: userId }
+            },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            },
+            orderBy: [
+              { firstName: 'asc' },
+              { lastName: 'asc' }
+            ]
+          });
+        }
+      }
+
+      // Formater pour le frontend
+      const formattedUsers = users.map(user => ({
+        id: user.id,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email
+      }));
+
+      res.json(formattedUsers);
+    } catch (error) {
+      console.error('Error fetching company users:', error);
+      res.status(500).json({ error: 'Erreur lors de la récupération des utilisateurs' });
+    }
+});
+
 // Modifier le profil de l'utilisateur connecté
 router.put('/me', authenticate, upload.single('avatar'), async (req, res) => {
   try {

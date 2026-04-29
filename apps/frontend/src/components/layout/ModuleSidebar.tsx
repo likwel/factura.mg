@@ -25,6 +25,8 @@ import { getModuleColor, moduleThemes } from '../shared/moduleThemes';
 import type { ModuleKey } from '../shared/moduleThemes';
 import { useAuth } from '../../contexts/AuthContext';
 
+import { messageApi, Message, MessageStats, MessageStatus, AttachmentType, Attachment } from '../../services/messageApi';
+
 // Type pour les items du menu
 interface MenuItem {
   name: string;
@@ -39,84 +41,6 @@ interface MenuItem {
 interface ModuleMenus {
   [key: string]: MenuItem[];
 }
-
-const moduleMenus: ModuleMenus = {
-  facturation: [
-    { name: 'Tableau de bord', path: '/app/facturation', icon: LayoutDashboard, exact: true },
-    { name: 'Devis', path: '/app/facturation/devis', icon: FileSignature, hasAdd: true },
-    { name: 'Factures', path: '/app/facturation/factures', icon: Receipt, hasAdd: true },
-    { name: 'Récurrentes', path: '/app/facturation/recurrentes', icon: Repeat, hasAdd: true },
-    { name: 'Articles', path: '/app/facturation/articles', icon: Package, hasAdd: true },
-    { name: 'Factures d\'achat', path: '/app/facturation/achats', icon: ShoppingBag, hasAdd: true },
-    { name: 'Note de frais', path: '/app/facturation/frais', icon: CreditCard, hasAdd: true },
-  ],
-  partenaires: [
-    { name: 'Tableau de bord', path: '/app/partenaires', icon: LayoutDashboard, exact: true },
-    { name: 'Clients', path: '/app/partenaires/clients', icon: Users, hasAdd: true },
-    { name: 'Fournisseurs', path: '/app/partenaires/fournisseurs', icon: Building2, hasAdd: true },
-    { name: 'Factures client', path: '/app/partenaires/factures', icon: Receipt, hasAdd: true },
-    { name: 'Factures d\'achat', path: '/app/partenaires/achats', icon: ShoppingBag, hasAdd: true },
-  ],
-  inventaire: [
-    { name: 'Tableau de bord', path: '/app/inventaire', icon: LayoutDashboard, exact: true },
-    { name: 'Stock actuel', path: '/app/inventaire/stock', icon: Boxes, hasAdd: true },
-    { name: 'Emplacement', path: '/app/inventaire/emplacements', icon: MapPin, hasAdd: true },
-    { name: 'Inventaire', path: '/app/inventaire/inventaire', icon: ClipboardList, hasAdd: true },
-    { name: 'Ajustement', path: '/app/inventaire/ajustement', icon: Settings, hasAdd: true },
-    { name: 'Transfert', path: '/app/inventaire/transfert', icon: ArrowRightLeft, hasAdd: true },
-    { name: 'Documents', path: '/app/inventaire/documents', icon: FileStack, hasAdd: true },
-  ],
-  comptabilite: [
-    { name: 'Tableau de bord', path: '/app/comptabilite', icon: LayoutDashboard, exact: true },
-    { name: 'Journaux', path: '/app/comptabilite/journaux', icon: BookOpen, hasAdd: true },
-    { name: 'Écritures', path: '/app/comptabilite/ecritures', icon: FileEdit, hasAdd: true },
-    { name: 'Plan comptable', path: '/app/comptabilite/plan', icon: List, hasAdd: true },
-    { name: 'États', path: '/app/comptabilite/etats', icon: FileSpreadsheet, hasAdd: true },
-    { name: 'Trésorerie', path: '/app/comptabilite/tresorerie', icon: Wallet, hasAdd: true },
-    { name: 'Paramètres', path: '/app/comptabilite/parametres', icon: Settings, hasAdd: true },
-  ],
-  documents: [
-    { name: 'Tableau de bord', path: '/app/documents', icon: LayoutDashboard, exact: true },
-    { name: 'Devis', path: '/app/documents/devis', icon: FileSignature, hasAdd: true, section: 'VENTES' },
-    { name: 'Commandes', path: '/app/documents/commandes', icon: ShoppingCart, hasAdd: true },
-    { name: 'Factures', path: '/app/documents/factures', icon: Receipt, hasAdd: true },
-    { name: 'Bon de livraison', path: '/app/documents/livraison', icon: Truck, hasAdd: true },
-    { name: 'Avoirs', path: '/app/documents/avoirs', icon: RefreshCw, hasAdd: true },
-    { name: 'Expédition', path: '/app/documents/expedition', icon: Send, hasAdd: true },
-  ],
-  parametre: [
-    { name: 'Mon Profil', path: '/app/parametre', icon: User, exact: true },
-    { name: 'Entreprise', path: '/app/parametre/entreprise', icon: Building2 },
-    { name: 'Utilisateurs', path: '/app/parametre/utilisateurs', icon: Users, hasAdd: true },
-    { name: 'Permissions', path: '/app/parametre/permissions', icon: Shield, hasAdd: true },
-    { name: 'Abonnement', path: '/app/parametre/abonnement', icon: CreditCard, hasAdd: true },
-    { name: 'Notifications', path: '/app/parametre/notifications', icon: Bell },
-    { name: 'Messages', path: '/app/parametre/messages', icon: MessagesSquare },
-    { name: 'Sécurité', path: '/app/parametre/securite', icon: Shield },
-    { name: 'Apparence', path: '/app/parametre/theme', icon: Palette },
-    { name: 'Numérotation', path: '/app/parametre/numerotation', icon: Settings2 },
-  ],
-  messages: [
-    { name: 'Tableau de bord', path: '/app/messages', icon: LayoutDashboard, exact: true },
-    { name: 'Boîte de réception', path: '/app/messages/inbox', icon: Inbox, section: 'MESSAGES' },
-    { name: 'Non lus', path: '/app/messages/unread', icon: Mail },
-    { name: 'Importants', path: '/app/messages/starred', icon: Star },
-    { name: 'Envoyés', path: '/app/messages/sent', icon: Send },
-    { name: 'Brouillons', path: '/app/messages/drafts', icon: Clock },
-    { name: 'Archivés', path: '/app/messages/archived', icon: Archive },
-    { name: 'Corbeille', path: '/app/messages/trash', icon: Trash2 },
-  ],
-  notifications: [
-    { name: 'Tableau de bord', path: '/app/notifications', icon: LayoutDashboard, exact: true },
-    { name: 'Toutes', path: '/app/notifications/all', icon: Bell, section: 'NOTIFICATIONS' },
-    { name: 'Non lues', path: '/app/notifications/unread', icon: AlertCircle },
-    { name: 'Succès', path: '/app/notifications/success', icon: CheckCircle },
-    { name: 'Avertissements', path: '/app/notifications/warnings', icon: AlertTriangle },
-    { name: 'Erreurs', path: '/app/notifications/errors', icon: AlertCircle },
-    { name: 'Informations', path: '/app/notifications/info', icon: Info },
-    { name: 'Archivées', path: '/app/notifications/archived', icon: Archive },
-  ],
-};
 
 interface ModuleSidebarProps {
   moduleId: ModuleKey;
@@ -137,6 +61,134 @@ export default function ModuleSidebar({
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const [stats, setStats] = useState<MessageStats | null>(null);
+
+  const [moduleMenus, setModuleMenus] = useState<ModuleMenus>({
+    facturation: [
+      { name: 'Tableau de bord', path: '/app/facturation', icon: LayoutDashboard, exact: true },
+      { name: 'Devis', path: '/app/facturation/devis', icon: FileSignature, hasAdd: true },
+      { name: 'Factures', path: '/app/facturation/factures', icon: Receipt, hasAdd: true },
+      { name: 'Récurrentes', path: '/app/facturation/recurrentes', icon: Repeat, hasAdd: true },
+      { name: 'Articles', path: '/app/facturation/articles', icon: Package, hasAdd: true },
+      { name: 'Factures d\'achat', path: '/app/facturation/achats', icon: ShoppingBag, hasAdd: true },
+      { name: 'Note de frais', path: '/app/facturation/frais', icon: CreditCard, hasAdd: true },
+    ],
+    partenaires: [
+      { name: 'Tableau de bord', path: '/app/partenaires', icon: LayoutDashboard, exact: true },
+      { name: 'Clients', path: '/app/partenaires/clients', icon: Users, hasAdd: true },
+      { name: 'Fournisseurs', path: '/app/partenaires/fournisseurs', icon: Building2, hasAdd: true },
+      { name: 'Factures client', path: '/app/partenaires/factures', icon: Receipt, hasAdd: true },
+      { name: 'Factures d\'achat', path: '/app/partenaires/achats', icon: ShoppingBag, hasAdd: true },
+    ],
+    inventaire: [
+      { name: 'Tableau de bord', path: '/app/inventaire', icon: LayoutDashboard, exact: true },
+      { name: 'Stock actuel', path: '/app/inventaire/stock', icon: Boxes, hasAdd: true },
+      { name: 'Emplacement', path: '/app/inventaire/emplacements', icon: MapPin, hasAdd: true },
+      { name: 'Inventaire', path: '/app/inventaire/inventaire', icon: ClipboardList, hasAdd: true },
+      { name: 'Ajustement', path: '/app/inventaire/ajustement', icon: Settings, hasAdd: true },
+      { name: 'Transfert', path: '/app/inventaire/transfert', icon: ArrowRightLeft, hasAdd: true },
+      { name: 'Documents', path: '/app/inventaire/documents', icon: FileStack, hasAdd: true },
+    ],
+    comptabilite: [
+      { name: 'Tableau de bord', path: '/app/comptabilite', icon: LayoutDashboard, exact: true },
+      { name: 'Journaux', path: '/app/comptabilite/journaux', icon: BookOpen, hasAdd: true },
+      { name: 'Écritures', path: '/app/comptabilite/ecritures', icon: FileEdit, hasAdd: true },
+      { name: 'Plan comptable', path: '/app/comptabilite/plan', icon: List, hasAdd: true },
+      { name: 'États', path: '/app/comptabilite/etats', icon: FileSpreadsheet, hasAdd: true },
+      { name: 'Trésorerie', path: '/app/comptabilite/tresorerie', icon: Wallet, hasAdd: true },
+      { name: 'Paramètres', path: '/app/comptabilite/parametres', icon: Settings, hasAdd: true },
+    ],
+    documents: [
+      { name: 'Tableau de bord', path: '/app/documents', icon: LayoutDashboard, exact: true },
+      { name: 'Devis', path: '/app/documents/devis', icon: FileSignature, hasAdd: true, section: 'VENTES' },
+      { name: 'Commandes', path: '/app/documents/commandes', icon: ShoppingCart, hasAdd: true },
+      { name: 'Factures', path: '/app/documents/factures', icon: Receipt, hasAdd: true },
+      { name: 'Bon de livraison', path: '/app/documents/livraison', icon: Truck, hasAdd: true },
+      { name: 'Avoirs', path: '/app/documents/avoirs', icon: RefreshCw, hasAdd: true },
+      { name: 'Expédition', path: '/app/documents/expedition', icon: Send, hasAdd: true },
+    ],
+    parametre: [
+      { name: 'Mon Profil', path: '/app/parametre', icon: User, exact: true },
+      { name: 'Entreprise', path: '/app/parametre/entreprise', icon: Building2 },
+      { name: 'Utilisateurs', path: '/app/parametre/utilisateurs', icon: Users, hasAdd: true },
+      { name: 'Permissions', path: '/app/parametre/permissions', icon: Shield, hasAdd: true },
+      { name: 'Abonnement', path: '/app/parametre/abonnement', icon: CreditCard, hasAdd: true },
+      { name: 'Notifications', path: '/app/parametre/notifications', icon: Bell },
+      { name: 'Messages', path: '/app/parametre/messages', icon: MessagesSquare },
+      { name: 'Sécurité', path: '/app/parametre/securite', icon: Shield },
+      { name: 'Apparence', path: '/app/parametre/theme', icon: Palette },
+      { name: 'Numérotation', path: '/app/parametre/numerotation', icon: Settings2 },
+    ],
+    messages: [
+      { name: 'Tableau de bord', path: '/app/messages', icon: LayoutDashboard, exact: true },
+      { name: 'Boîte de réception', path: '/app/messages/inbox', icon: Inbox, section: 'MESSAGES' },
+      { name: 'Non lus', path: '/app/messages/unread', icon: Mail },
+      { name: 'Importants', path: '/app/messages/starred', icon: Star },
+      { name: 'Envoyés', path: '/app/messages/sent', icon: Send },
+      { name: 'Brouillons', path: '/app/messages/drafts', icon: Clock },
+      { name: 'Archivés', path: '/app/messages/archived', icon: Archive },
+      { name: 'Corbeille', path: '/app/messages/trash', icon: Trash2 },
+    ],
+    notifications: [
+      { name: 'Tableau de bord', path: '/app/notifications', icon: LayoutDashboard, exact: true },
+      { name: 'Toutes', path: '/app/notifications/all', icon: Bell, section: 'NOTIFICATIONS' },
+      { name: 'Non lues', path: '/app/notifications/unread', icon: AlertCircle },
+      { name: 'Succès', path: '/app/notifications/success', icon: CheckCircle },
+      { name: 'Avertissements', path: '/app/notifications/warnings', icon: AlertTriangle },
+      { name: 'Erreurs', path: '/app/notifications/errors', icon: AlertCircle },
+      { name: 'Informations', path: '/app/notifications/info', icon: Info },
+      { name: 'Archivées', path: '/app/notifications/archived', icon: Archive },
+    ],
+  });
+
+  const loadStats = async () => {
+    try {
+      const statsData = await messageApi.getStats();
+      setStats(statsData);
+    } catch (err: any) {
+      console.error('Error loading stats:', err);
+    } finally {
+    }
+  };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const countersMap: Record<string, keyof MessageStats> = {
+    '/app/messages/inbox': 'inbox',
+    '/app/messages/unread': 'unread',
+    '/app/messages/starred': 'starred',
+    '/app/messages/sent': 'sent',
+    '/app/messages/drafts': 'drafts',
+    '/app/messages/archived': 'archived',
+    '/app/messages/trash': 'trash',
+  };
+
+  useEffect(() => {
+    if (!stats) return;
+
+    setModuleMenus((prev) => ({
+      ...prev,
+      messages: prev.messages.map((item) => {
+        const key = countersMap[item.path];
+
+        if (key) {
+          const count = stats[key] ?? 0;
+
+          return {
+            ...item,
+            name: count > 0
+              ? `${item.name.split(' (')[0]} (${count})`
+              : item.name.split(' (')[0],
+            count : count,
+          };
+        }
+
+        return item;
+      }),
+    }));
+  }, [stats]);
 
   // Calculer les initiales depuis user
   const userInitials = user?.firstName && user?.lastName
