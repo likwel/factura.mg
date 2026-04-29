@@ -4,30 +4,43 @@ import { useArticles, ACTIVE_FILTERS, STOCK_STATUS } from '../hooks/useArticles'
 import { Article } from '../services/article.service';
 import { useNavigate } from 'react-router-dom';
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const STOCK_STYLES = {
+  ok:  { badge: 'text-green-700 bg-green-100', label: '✔', tooltip: 'Stock suffisant' },
+  low: { badge: 'text-yellow-700 bg-yellow-100', label: '⚠', tooltip: 'Stock faible — Réapprovisionnement conseillé' },
+  out: { badge: 'text-red-700 bg-red-100', label: '❌', tooltip: 'Rupture de stock' },
+} as const;
+
+const articlePath = (id: string) => `/app/facturation/articles/${id}`;
+
+// ─── Composant ────────────────────────────────────────────────────────────────
+
 export default function ArticlesPage() {
   const navigate = useNavigate();
   const {
-    articles,
-    loading,
-    error,
-    currentPage,
-    totalPages,
-    pageSize,
-    setCurrentPage,
-    setPageSize,
-    setSearch,
-    setActiveFilter,
-    refresh,
-    handleDelete,
+    articles, loading, error,
+    currentPage, totalPages, pageSize,
+    setCurrentPage, setPageSize,
+    setSearch, setActiveFilter,
+    refresh, handleDelete,
   } = useArticles();
 
+  // ── Colonnes ───────────────────────────────────────────────────────────────
   const columns: Column<Article>[] = [
     {
       key: 'code',
       header: 'CODE',
       width: '100px',
-      render: (value) => (
-        <span className="font-mono text-base font-semibold text-gray-700">{value}</span>
+      render: (value, row) => (
+        <button
+          type="button"
+          onClick={() => navigate(articlePath(row.id))}
+          className="font-mono text-base font-semibold text-blue-600 hover:text-blue-800 hover:underline underline-offset-2 transition-colors text-left"
+          title={`Voir l'article ${value}`}
+        >
+          {value as string}
+        </button>
       ),
     },
     {
@@ -35,21 +48,32 @@ export default function ArticlesPage() {
       header: 'ARTICLE',
       width: '260px',
       render: (value, row) => (
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => navigate(articlePath(row.id))}
+          className="flex items-center gap-2 group text-left w-full"
+          title={`Voir l'article ${value}`}
+        >
           {row.image ? (
-            <img src={row.image} className="w-8 h-8 rounded object-cover" />
+            <img
+              src={row.image}
+              alt={row.name}
+              className="w-8 h-8 rounded object-cover shrink-0"
+            />
           ) : (
-            <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center">
+            <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center shrink-0">
               <Package className="w-4 h-4 text-gray-400" />
             </div>
           )}
-          <div>
-            <p className="font-medium text-base">{value}</p>
+          <div className="min-w-0">
+            <p className="font-medium text-base text-gray-900 group-hover:text-blue-600 group-hover:underline underline-offset-2 transition-colors truncate">
+              {value as string}
+            </p>
             {row.category && (
-              <p className="text-xs text-gray-400">{row.category.name}</p>
+              <p className="text-xs text-gray-400 truncate">{row.category.name}</p>
             )}
           </div>
-        </div>
+        </button>
       ),
     },
     {
@@ -58,30 +82,18 @@ export default function ArticlesPage() {
       width: '160px',
       render: (value, row) => {
         const status = STOCK_STATUS(row);
-        const styles = {
-          ok:  'text-green-700 bg-green-100',
-          low: 'text-yellow-700 bg-yellow-100',
-          out: 'text-red-700 bg-red-100',
-        };
-        
-        // Messages de tooltip selon le statut
-        const tooltips = {
-          ok: 'Stock suffisant',
-          low: 'Stock faible - Réapprovisionnement conseillé',
-          out: 'Rupture de stock'
-        };
-
-        const labels = { ok: '✔', low: '⚠', out: '❌' };
+        const { badge, label, tooltip } = STOCK_STYLES[status];
         return (
-          <div className="flex flex-row gap-0.5">
+          <div className="flex items-center gap-1">
             <span className="text-base">
-              {value} {row.unit ?? 'unité(s)'}
+              {value as number} {row.unit ?? 'unité(s)'}
             </span>
-            <span className={`cursor-pointer ms-1 text-xs px-2 py-0.5 rounded-full w-fit font-medium ${styles[status]}`}
-              title={tooltips[status]}
-              aria-label={tooltips[status]}
-              >
-              {labels[status]}
+            <span
+              className={`ms-1 text-xs px-2 py-0.5 rounded-full font-medium ${badge}`}
+              title={tooltip}
+              aria-label={tooltip}
+            >
+              {label}
             </span>
           </div>
         );
@@ -103,17 +115,6 @@ export default function ArticlesPage() {
         <span className="font-semibold text-base">{Number(value).toLocaleString('fr-FR')} Ar</span>
       ),
     },
-    // {
-    //   key: 'supplier',
-    //   header: 'FOURNISSEUR',
-    //   width: '160px',
-    //   render: (supplier) =>
-    //     supplier ? (
-    //       <span className="text-sm text-gray-600">{supplier.name}</span>
-    //     ) : (
-    //       <span className="text-xs text-gray-300 italic">—</span>
-    //     ),
-    // },
     {
       key: 'isActive',
       header: 'STATUT',
@@ -130,34 +131,36 @@ export default function ArticlesPage() {
       key: 'createdAt',
       header: 'CRÉÉ LE',
       width: '100px',
-      render: (value) => new Date(value).toLocaleDateString('fr-FR'),
+      render: (value) => new Date(value as string).toLocaleDateString('fr-FR'),
     },
   ];
 
+  // ── Actions de ligne ───────────────────────────────────────────────────────
   const rowActions: TableAction<Article>[] = [
     {
       label: 'Voir',
       icon: <Eye className="w-4 h-4" />,
-      onClick: (article) => navigate(`/app/facturation/articles/${article.id}`),
+      onClick: (a) => navigate(articlePath(a.id)),
     },
     {
       label: 'Modifier',
       icon: <Edit className="w-4 h-4" />,
-      onClick: (article) => navigate(`/app/facturation/articles/${article.id}/edit`),
+      onClick: (a) => navigate(`${articlePath(a.id)}/edit`),
     },
     {
       label: 'Dupliquer',
       icon: <Copy className="w-4 h-4" />,
-      onClick: (article) => navigate(`/app/facturation/articles/${article.id}/duplicate`),
+      onClick: (a) => navigate(`${articlePath(a.id)}/duplicate`),
     },
     {
       label: 'Supprimer',
       icon: <Trash2 className="w-4 h-4" />,
-      onClick: (article) => handleDelete(article.id),
+      onClick: (a) => handleDelete(a.id),
       variant: 'danger',
     },
   ];
 
+  // ── Actions groupées ───────────────────────────────────────────────────────
   const bulkActions: BulkAction<Article>[] = [
     {
       label: 'Supprimer',
@@ -167,10 +170,14 @@ export default function ArticlesPage() {
     },
   ];
 
+  // ── Rendu ──────────────────────────────────────────────────────────────────
   return (
-    <div className="h-screen">
+    <div className="h-screen flex flex-col gap-2">
       {error && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 text-sm border border-red-200 rounded-lg mb-2">
+        <div
+          role="alert"
+          className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 text-sm border border-red-200 rounded-lg"
+        >
           <AlertCircle className="w-4 h-4 shrink-0" />
           {error}
         </div>
@@ -178,7 +185,7 @@ export default function ArticlesPage() {
 
       <DataTable
         title="Articles"
-        createButtonColor ="createColor"
+        createButtonColor="createColor"
         description="Gérez votre catalogue d'articles"
         createLabel="Nouvel article"
         onCreateClick={() => navigate('/app/facturation/articles/new')}
@@ -192,7 +199,7 @@ export default function ArticlesPage() {
         bulkActions={bulkActions}
         rowActions={rowActions}
 
-        searchPlaceholder="Code, nom, code-barre..."
+        searchPlaceholder="Code, nom, code-barre…"
         onSearch={setSearch}
 
         filters={ACTIVE_FILTERS}

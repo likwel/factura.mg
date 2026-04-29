@@ -67,22 +67,41 @@ export default function App() {
 
               {/* MODULE FACTURATION - VIOLET */}
               <Route path="/app/facturation" element={<FacturationDashboard />} />
-              <Route path="/app/facturation/devis" element={<div className="p-6">Page Devis (à créer)</div>} />
-              <Route path="/app/facturation/recurrentes" element={<div className="p-6">Page Recurrents (à créer)</div>} />
-              <Route path="/app/facturation/factures" element={<InvoicesPage />} />
-              <Route path="/app/facturation/factures/new" element={<InvoiceForm />} />
-              <Route path="/app/facturation/articles" element={<ArticlesPage />} />
-              <Route path="/app/facturation/articles/new" element={<ArticleForm />} />
-              <Route path="/app/facturation/achats" element={<div className="p-6">Page Achats (à créer)</div>} />
-              <Route path="/app/facturation/frais" element={<div className="p-6">Page Frais (à créer)</div>} />
+              
+              <Route path="/app/facturation/factures">
+                <Route index               element={<InvoicesPage />} />
+                <Route path="new"          element={<InvoiceForm />} />
+                <Route path=":id"          element={<InvoiceForm />} />
+                <Route path=":id/edit"     element={<InvoiceForm />} />
+                <Route path=":id/duplicate" element={<InvoiceForm />} />
+              </Route>
+
+              <Route path="/app/facturation/devis">
+                <Route index               element={<InvoicesPage />} />
+                <Route path="new"          element={<InvoiceForm />} />
+                <Route path=":id"          element={<InvoiceForm />} />
+                <Route path=":id/edit"     element={<InvoiceForm />} />
+                <Route path=":id/duplicate" element={<InvoiceForm />} />
+              </Route>
+
+              <Route path="/app/facturation/achats">
+                <Route index               element={<InvoicesPage />} />
+                <Route path="new"          element={<InvoiceForm />} />
+                <Route path=":id"          element={<InvoiceForm />} />
+                <Route path=":id/edit"     element={<InvoiceForm />} />
+                <Route path=":id/duplicate" element={<InvoiceForm />} />
+              </Route>
 
               <Route path="/app/facturation/articles">
-                <Route index element={<ArticlesPage />} />
-                <Route path="new" element={<ArticleForm />} />
-                <Route path=":id" element={<ArticleForm />} />
-                <Route path=":id/edit" element={<ArticleForm />} />
-                <Route path=":id/duplicate" element={<ArticleForm />} />
+                <Route index                  element={<ArticlesPage />} />
+                <Route path="new"             element={<ArticleForm />} />
+                <Route path=":id"             element={<ArticleForm />} />
+                <Route path=":id/edit"        element={<ArticleForm />} />
+                <Route path=":id/duplicate"   element={<ArticleForm />} />
               </Route>
+
+              <Route path="/app/facturation/recurrentes"  element={<div className="p-6">Page Récurrentes (à créer)</div>} />
+              <Route path="/app/facturation/frais"        element={<div className="p-6">Page Frais (à créer)</div>} />
               
               {/* MODULE PARTENAIRES - BLEU */}
               <Route path="/app/partenaires" element={<PartenairesDashboard />} />
@@ -90,6 +109,11 @@ export default function App() {
               {/* <Route path="/app/partenaires/clients" element={<PartenairesDashboard />} /> */}
               <Route path="/app/partenaires/clients" element={<PartenairePage type="client"/>} />
               <Route path="/app/partenaires/fournisseurs" element={<PartenairePage type="fournisseur"/>} />
+              <Route path="/app/partenaires/ventes" element={<InvoicesPage/>} />
+              <Route path="/app/partenaires/achats" element={<InvoicesPage/>} />
+
+              <Route path="/app/partenaires/ventes/new" element={<InvoiceForm/>} />
+              <Route path="/app/partenaires/achats/new" element={<InvoiceForm/>} />
               
               {/* MODULE INVENTAIRE - ORANGE */}
               <Route path="/app/inventaire" element={<div className="p-6"><h1 className="text-2xl font-bold">Dashboard Inventaire</h1></div>} />

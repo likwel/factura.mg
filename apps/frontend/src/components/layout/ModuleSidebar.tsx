@@ -54,7 +54,7 @@ const moduleMenus: ModuleMenus = {
     { name: 'Tableau de bord', path: '/app/partenaires', icon: LayoutDashboard, exact: true },
     { name: 'Clients', path: '/app/partenaires/clients', icon: Users, hasAdd: true },
     { name: 'Fournisseurs', path: '/app/partenaires/fournisseurs', icon: Building2, hasAdd: true },
-    { name: 'Factures client', path: '/app/partenaires/factures', icon: Receipt, hasAdd: true },
+    { name: 'Factures client', path: '/app/partenaires/ventes', icon: Receipt, hasAdd: true },
     { name: 'Factures d\'achat', path: '/app/partenaires/achats', icon: ShoppingBag, hasAdd: true },
   ],
   inventaire: [

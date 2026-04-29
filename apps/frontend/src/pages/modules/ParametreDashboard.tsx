@@ -363,7 +363,7 @@ function EntrepriseSection() {
   // ✅ Mettre à jour le state quand currentCompany change
   useEffect(() => {
     if (currentCompany) {
-      console.log('📊 Current Company Data:', currentCompany); // Debug
+      // console.log('📊 Current Company Data:', currentCompany); // Debug
       setFormData({
         name: currentCompany.name || '',
         email: currentCompany.email || '',

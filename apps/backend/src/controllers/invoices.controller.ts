@@ -386,7 +386,12 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
     const companyId = getCompanyId(req, res); if (!companyId) return;
     const { status, paidDate } = req.body;
 
-    const validStatuses: InvoiceStatus[] = ['DRAFT','PENDING','VALIDATED','SENT','PARTIAL','COMPLETED','CANCELLED','EXPIRED'];
+    const validStatuses: InvoiceStatus[] = [
+      'DRAFT', 'PENDING', 'VALIDATED', 'SENT',
+      'PARTIAL', 'COMPLETED', 'PAID', 'OVERDUE',  // ← ajoutés
+      'CANCELLED', 'EXPIRED',
+    ];
+
     if (!validStatuses.includes(status))
       return res.status(400).json({ error: `Statut invalide. Valeurs : ${validStatuses.join(', ')}` });
 

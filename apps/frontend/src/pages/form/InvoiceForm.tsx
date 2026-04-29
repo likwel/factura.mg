@@ -1,34 +1,24 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   ArrowLeft, FileText, Plus, Trash2, RefreshCw, Save,
   Info, ChevronDown, Loader2, AlertCircle, Edit, Copy,
   Trash, MoreVertical, ArrowRight, CheckCircle, XCircle,
 } from "lucide-react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import api from "../../services/api";
-import toast from 'react-hot-toast';
+import toast from "react-hot-toast";
+import { printInvoice, PrintFormat, PrintData } from "../../utils/printInvoice";
 
-// ─── Enums ────────────────────────────────────────────────────
-type Mode     = "create" | "edit" | "view";
-type DocType  = "QUOTE" | "INVOICE" | "CREDIT_NOTE" | "DELIVERY_NOTE" | "SHIPPING_NOTE" | "PURCHASE_ORDER" | "SUPPLIER_INVOICE" | "RECEIPT_NOTE" | "RETURN_NOTE";
-type DocStatus = "DRAFT" | "PENDING" | "VALIDATED" | "SENT" | "PARTIAL" | "COMPLETED" | "CANCELLED" | "EXPIRED";
-type Interval = "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
+// ─── Types ────────────────────────────────────────────────────
+type Mode      = "create" | "edit" | "view" | "duplicate";
+type DocType   = "QUOTE" | "INVOICE" | "CREDIT_NOTE" | "DELIVERY_NOTE" | "SHIPPING_NOTE" | "PURCHASE_ORDER" | "SUPPLIER_INVOICE" | "RECEIPT_NOTE" | "RETURN_NOTE";
+type DocStatus = "DRAFT" | "PENDING" | "VALIDATED" | "SENT" | "PARTIAL" | "COMPLETED" | "PAID" | "OVERDUE" | "CANCELLED" | "EXPIRED";
+type Interval  = "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
 
-// ─── Interfaces ───────────────────────────────────────────────
-interface Partner { id: string; name: string; email?: string; }
-interface Article { id: string; code: string; name: string; sellingPrice: number; purchasePrice: number; unit?: string; }
+interface Partner  { id: string; name: string; email?: string }
+interface Article  { id: string; code: string; name: string; sellingPrice: number; purchasePrice: number; unit?: string }
+interface LineItem  { id: string; articleId: string; articleName: string; qty: number; unitPrice: number; discount: number; tax: number; unit: string }
 
-interface LineItem {
-  id:          string;
-  articleId:   string;
-  articleName: string;
-  qty:         number;
-  unitPrice:   number;
-  discount:    number;
-  tax:         number;
-  unit:        string;
-}
-
-// FormState — aligné 1:1 sur model Prisma Invoice
 interface FormState {
   type:              DocType;
   invoiceNumber:     string;
@@ -49,7 +39,7 @@ interface FormState {
   parentInvoiceId:   string;
 }
 
-// ─── Config documents ─────────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────
 const DOC_CFG: Record<DocType, {
   label: string; icon: string; prefix: string;
   partnerType: "client" | "supplier";
@@ -57,26 +47,41 @@ const DOC_CFG: Record<DocType, {
   canConvertTo: DocType[];
   showDue: boolean; showDelivery: boolean; showValidity: boolean; showRecurring: boolean;
 }> = {
-  QUOTE:            { label: "Devis",               icon: "📋", prefix: "DEV", partnerType: "client",   color: "text-purple-700", bgColor: "bg-purple-50 border-purple-200", canConvertTo: ["INVOICE", "DELIVERY_NOTE"],        showDue: false, showDelivery: false, showValidity: true,  showRecurring: false },
-  INVOICE:          { label: "Facture client",      icon: "🧾", prefix: "FAC", partnerType: "client",   color: "text-blue-700",   bgColor: "bg-blue-50 border-blue-200",     canConvertTo: ["CREDIT_NOTE", "DELIVERY_NOTE"],    showDue: true,  showDelivery: false, showValidity: false, showRecurring: true  },
+  QUOTE:            { label: "Devis",               icon: "📋", prefix: "DEV", partnerType: "client",   color: "text-purple-700", bgColor: "bg-purple-50 border-purple-200", canConvertTo: ["INVOICE","DELIVERY_NOTE"],         showDue: false, showDelivery: false, showValidity: true,  showRecurring: false },
+  INVOICE:          { label: "Facture client",      icon: "🧾", prefix: "FAC", partnerType: "client",   color: "text-blue-700",   bgColor: "bg-blue-50 border-blue-200",     canConvertTo: ["CREDIT_NOTE","DELIVERY_NOTE"],     showDue: true,  showDelivery: false, showValidity: false, showRecurring: true  },
   CREDIT_NOTE:      { label: "Avoir",               icon: "↩️", prefix: "AVO", partnerType: "client",   color: "text-orange-700", bgColor: "bg-orange-50 border-orange-200", canConvertTo: [],                                  showDue: false, showDelivery: false, showValidity: false, showRecurring: false },
-  DELIVERY_NOTE:    { label: "Bon de livraison",    icon: "🚚", prefix: "BL",  partnerType: "client",   color: "text-teal-700",   bgColor: "bg-teal-50 border-teal-200",     canConvertTo: ["SHIPPING_NOTE", "INVOICE"],        showDue: false, showDelivery: true,  showValidity: false, showRecurring: false },
+  DELIVERY_NOTE:    { label: "Bon de livraison",    icon: "🚚", prefix: "BL",  partnerType: "client",   color: "text-teal-700",   bgColor: "bg-teal-50 border-teal-200",     canConvertTo: ["SHIPPING_NOTE","INVOICE"],          showDue: false, showDelivery: true,  showValidity: false, showRecurring: false },
   SHIPPING_NOTE:    { label: "Bordereau d'expéd.", icon: "📦", prefix: "BE",  partnerType: "client",   color: "text-cyan-700",   bgColor: "bg-cyan-50 border-cyan-200",     canConvertTo: [],                                  showDue: false, showDelivery: true,  showValidity: false, showRecurring: false },
-  PURCHASE_ORDER:   { label: "Bon de commande",     icon: "🛒", prefix: "BC",  partnerType: "supplier", color: "text-indigo-700", bgColor: "bg-indigo-50 border-indigo-200", canConvertTo: ["RECEIPT_NOTE", "SUPPLIER_INVOICE"],showDue: false, showDelivery: true,  showValidity: false, showRecurring: false },
+  PURCHASE_ORDER:   { label: "Bon de commande",     icon: "🛒", prefix: "BC",  partnerType: "supplier", color: "text-indigo-700", bgColor: "bg-indigo-50 border-indigo-200", canConvertTo: ["RECEIPT_NOTE","SUPPLIER_INVOICE"], showDue: false, showDelivery: true,  showValidity: false, showRecurring: false },
   SUPPLIER_INVOICE: { label: "Facture fournisseur", icon: "🏭", prefix: "FAF", partnerType: "supplier", color: "text-rose-700",   bgColor: "bg-rose-50 border-rose-200",     canConvertTo: ["CREDIT_NOTE"],                     showDue: true,  showDelivery: false, showValidity: false, showRecurring: false },
   RECEIPT_NOTE:     { label: "Bon de réception",   icon: "✅", prefix: "BR",  partnerType: "supplier", color: "text-green-700",  bgColor: "bg-green-50 border-green-200",   canConvertTo: ["SUPPLIER_INVOICE"],                showDue: false, showDelivery: true,  showValidity: false, showRecurring: false },
   RETURN_NOTE:      { label: "Bon de retour",       icon: "🔄", prefix: "BRT", partnerType: "client",   color: "text-red-700",    bgColor: "bg-red-50 border-red-200",       canConvertTo: [],                                  showDue: false, showDelivery: false, showValidity: false, showRecurring: false },
 };
 
 const STATUS_CFG: Record<DocStatus, { label: string; cls: string }> = {
-  DRAFT:     { label: "Brouillon",  cls: "bg-gray-100 text-gray-600 border-gray-200" },
-  PENDING:   { label: "En attente", cls: "bg-amber-50 text-amber-700 border-amber-200" },
-  VALIDATED: { label: "Validé",     cls: "bg-blue-50 text-blue-700 border-blue-200" },
-  SENT:      { label: "Envoyé",     cls: "bg-indigo-50 text-indigo-700 border-indigo-200" },
-  PARTIAL:   { label: "Partiel",    cls: "bg-orange-50 text-orange-700 border-orange-200" },
-  COMPLETED: { label: "Terminé",    cls: "bg-green-50 text-green-700 border-green-200" },
-  CANCELLED: { label: "Annulé",     cls: "bg-red-50 text-red-700 border-red-200" },
-  EXPIRED:   { label: "Expiré",     cls: "bg-gray-100 text-gray-500 border-gray-200" },
+  DRAFT:     { label: "Brouillon",  cls: "bg-gray-100    text-gray-600   border-gray-200"   },
+  PENDING:   { label: "En attente", cls: "bg-amber-50    text-amber-700  border-amber-200"  },
+  VALIDATED: { label: "Validé",     cls: "bg-blue-50     text-blue-700   border-blue-200"   },
+  SENT:      { label: "Envoyé",     cls: "bg-indigo-50   text-indigo-700 border-indigo-200" },
+  PARTIAL:   { label: "Partiel",    cls: "bg-orange-50   text-orange-700 border-orange-200" },
+  COMPLETED: { label: "Terminé",    cls: "bg-green-50    text-green-700  border-green-200"  },
+  PAID:      { label: "Payée",      cls: "bg-emerald-50  text-emerald-700 border-emerald-200"},
+  OVERDUE:   { label: "En retard",  cls: "bg-red-100     text-red-700    border-red-200"    },
+  CANCELLED: { label: "Annulé",     cls: "bg-red-50      text-red-700    border-red-200"    },
+  EXPIRED:   { label: "Expiré",     cls: "bg-gray-100    text-gray-500   border-gray-200"   },
+};
+
+const STATUS_TRANSITIONS: Record<DocStatus, DocStatus[]> = {
+  DRAFT:     ["PENDING", "VALIDATED", "SENT", "CANCELLED"],
+  PENDING:   ["VALIDATED", "SENT", "OVERDUE", "CANCELLED"],
+  VALIDATED: ["SENT", "PARTIAL", "PAID", "COMPLETED", "CANCELLED"],
+  SENT:      ["PARTIAL", "PAID", "OVERDUE", "COMPLETED", "CANCELLED"],
+  PARTIAL:   ["PAID", "COMPLETED", "OVERDUE", "CANCELLED"],
+  COMPLETED: ["PAID"],
+  PAID:      [],
+  OVERDUE:   ["SENT", "PAID", "CANCELLED"],
+  CANCELLED: [],
+  EXPIRED:   ["DRAFT"],
 };
 
 const INTERVALS: Record<Interval, string> = {
@@ -86,29 +91,18 @@ const INTERVALS: Record<Interval, string> = {
 // ─── Helpers ──────────────────────────────────────────────────
 const today   = new Date().toISOString().split("T")[0];
 const fmt     = (n: number) => new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2 }).format(n);
+const fmtDate = (s: string) => s ? new Date(s).toLocaleDateString("fr-FR") : "—";
 const newItem = (): LineItem => ({ id: Math.random().toString(36).slice(2), articleId: "", articleName: "", qty: 1, unitPrice: 0, discount: 0, tax: 20, unit: "" });
 
 const emptyForm = (type: DocType = "INVOICE"): FormState => ({
-  type,
-  invoiceNumber:     "",
-  partnerId:         "",
-  status:            "DRAFT",
-  date:              today,
-  dueDate:           "",
-  deliveryDate:      "",
-  validUntil:        "",
-  notes:             "",
-  internalNotes:     "",
-  globalDiscount:    0,
-  tax:               20,
-  items:             [newItem()],
-  isRecurring:       false,
-  recurringInterval: "MONTHLY",
-  recurringEndDate:  "",
-  parentInvoiceId:   "",
+  type, invoiceNumber: "", partnerId: "", status: "DRAFT",
+  date: today, dueDate: "", deliveryDate: "", validUntil: "",
+  notes: "", internalNotes: "", globalDiscount: 0, tax: 20,
+  items: [newItem()], isRecurring: false, recurringInterval: "MONTHLY",
+  recurringEndDate: "", parentInvoiceId: "",
 });
 
-// ─── Sub-components ───────────────────────────────────────────
+// ─── Shared UI ────────────────────────────────────────────────
 const iCls  = "w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white text-gray-800 placeholder-gray-400 transition-colors disabled:bg-gray-50 disabled:text-gray-400";
 const roCls = "w-full px-3 py-2.5 text-sm border border-gray-100 rounded-lg bg-gray-50 text-gray-700 min-h-[42px]";
 
@@ -135,96 +129,153 @@ function Field({ label, required, hint, children, className = "" }: {
   );
 }
 
-// ─── Props ────────────────────────────────────────────────────
-interface Props {
-  mode?:        Mode;
-  documentId?:  string;
-  defaultType?: DocType;
-  onBack?:      () => void;
-  onSaved?:     (doc: any) => void;
+// ─── StatusBadge cliquable (mode vue) ─────────────────────────
+function StatusBadge({ status, onChangeTo }: { status: DocStatus; onChangeTo: (s: DocStatus) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const transitions = STATUS_TRANSITIONS[status];
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => transitions.length > 0 && setOpen(v => !v)}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all
+          ${STATUS_CFG[status].cls}
+          ${transitions.length > 0 ? "cursor-pointer hover:shadow-sm" : "cursor-default"}`}
+      >
+        {STATUS_CFG[status].label}
+        {transitions.length > 0 && <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-30">
+          <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Changer le statut</p>
+          {transitions.map(s => (
+            <button key={s} onClick={() => { onChangeTo(s); setOpen(false); }}
+              className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-gray-50 transition-colors">
+              <span className={`w-2 h-2 rounded-full border ${STATUS_CFG[s].cls}`} />
+              {STATUS_CFG[s].label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Component ────────────────────────────────────────────────
-export default function InvoiceForm({ mode: initMode = "create", documentId, defaultType = "INVOICE", onBack, onSaved }: Props) {
-  // Lecture du type depuis ?type=INVOICE (URL)
-  const typeFromUrl = (new URLSearchParams(window.location.search).get("type") ?? defaultType) as DocType;
+export default function InvoiceForm() {
+  const { id }       = useParams<{ id?: string }>();
+  const navigate     = useNavigate();
+  const location     = useLocation();
 
-  const [mode,       setMode]      = useState<Mode>(initMode);
-  const [form,       setForm]      = useState<FormState>(emptyForm(typeFromUrl));
-  const [snapshot,   setSnapshot]  = useState<FormState | null>(null);
+  // ── Déterminer le mode depuis l'URL (même pattern qu'ArticleForm) ──
+  const determineMode = (): Mode => {
+    if (!id) return "create";
+    if (location.pathname.endsWith("/edit"))      return "edit";
+    if (location.pathname.endsWith("/duplicate")) return "duplicate";
+    return "view";
+  };
 
-  const [partners,   setPartners]  = useState<Partner[]>([]);
-  const [articles,   setArticles]  = useState<Article[]>([]);
-  const [loadingP,   setLoadingP]  = useState(false);
-  const [loadingA,   setLoadingA]  = useState(false);
-  const [loadingDoc, setLoadingDoc]= useState(false);
-  const [saving,     setSaving]    = useState(false);
-  const [errorP,     setErrorP]    = useState<string | null>(null);
-  const [saveError,  setSaveError] = useState<string | null>(null);
-  const [saveOk,     setSaveOk]    = useState(false);
+  // Type depuis query param ?type=QUOTE
+  const typeFromUrl = (new URLSearchParams(location.search).get("type") ?? "INVOICE") as DocType;
 
-  const [showStatusMenu,  setShowStatusMenu]  = useState(false);
+  const [mode,           setMode]           = useState<Mode>(determineMode());
+  const [form,           setForm]           = useState<FormState>(emptyForm(typeFromUrl));
+  const [snapshot,       setSnapshot]       = useState<FormState | null>(null);
+  const [partners,       setPartners]       = useState<Partner[]>([]);
+  const [articles,       setArticles]       = useState<Article[]>([]);
+  const [loadingP,       setLoadingP]       = useState(false);
+  const [loadingA,       setLoadingA]       = useState(false);
+  const [loadingDoc,     setLoadingDoc]     = useState(false);
+  const [loadingNum,     setLoadingNum]     = useState(false);
+  const [saving,         setSaving]         = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
+  const [saveError,      setSaveError]      = useState<string | null>(null);
+  const [showPrintMenu,   setShowPrintMenu]   = useState(false);
   const [showActionMenu,  setShowActionMenu]  = useState(false);
   const [showConvertMenu, setShowConvertMenu] = useState(false);
+  const [showStatusMenu,  setShowStatusMenu]  = useState(false);
 
-  const cfg     = DOC_CFG[form.type];
-  const isView  = mode === "view";
-  const isCreate = mode === "create";
-  const canEdit  = !["COMPLETED", "CANCELLED"].includes(form.status);
+  const cfg       = DOC_CFG[form.type];
+  const isView    = mode === "view";
+  const isCreate  = mode === "create";
+  const isDuplicate = mode === "duplicate";
+  const canEdit = !["PAID", "COMPLETED", "CANCELLED"].includes(form.status);
 
-  // ── Chargement document existant
+  // ── Sync mode quand l'URL change (même pattern qu'ArticleForm) ──
   useEffect(() => {
-    if (!documentId || isCreate) return;
-    setLoadingDoc(true);
-    api.get(`/invoices/${documentId}`)
-      .then(r => {
-        const d = r.data;
-        const loaded: FormState = {
-          type:              d.type              ?? "INVOICE",
-          invoiceNumber:     d.invoiceNumber     ?? "",
-          partnerId:         d.clientId ?? d.supplierId ?? "",
-          status:            d.status            ?? "DRAFT",
-          date:              d.date?.split("T")[0]             ?? today,
-          dueDate:           d.dueDate?.split("T")[0]          ?? "",
-          deliveryDate:      d.deliveryDate?.split("T")[0]     ?? "",
-          validUntil:        d.validUntil?.split("T")[0]       ?? "",
-          notes:             d.notes             ?? "",
-          internalNotes:     d.internalNotes     ?? "",
-          globalDiscount:    Number(d.discount   ?? 0),
-          tax:               Number(d.taxRate    ?? 20),
-          isRecurring:       d.isRecurring       ?? false,
-          recurringInterval: d.recurringInterval ?? "MONTHLY",
-          recurringEndDate:  d.recurringEndDate?.split("T")[0] ?? "",
-          parentInvoiceId:   d.parentInvoiceId   ?? "",
-          items: (d.items ?? []).map((it: any) => ({
-            id:          it.id,
-            articleId:   it.articleId,
-            articleName: it.article?.name ?? it.description ?? "",
-            qty:         Number(it.quantity),
-            unitPrice:   Number(it.unitPrice),
-            discount:    Number(it.discount  ?? 0),
-            tax:         Number(it.tax       ?? 20),
-            unit:        it.article?.unit    ?? "",
-          })),
-        };
-        setForm(loaded);
-        setSnapshot(loaded);
-      })
-      .catch(() => setSaveError("Impossible de charger le document"))
-      .finally(() => setLoadingDoc(false));
-  }, [documentId]);
+    const newMode = determineMode();
+    setMode(newMode);
+  }, [id, location.pathname]);
 
-  const [loadingNum, setLoadingNum] = useState(false);
-
-  // ── Génération numéro depuis la config DB (create uniquement)
+  // ── Chargement document (view / edit / duplicate) ─────────────
   useEffect(() => {
-    if (!isCreate) return;
+    if (id && !isCreate) loadDocument();
+  }, [id]);
+
+  useEffect(() => {
+    if (isDuplicate && id) loadDocument();
+  }, [mode]);
+
+  const loadDocument = async () => {
+    if (!id) return;
+    setLoadingDoc(true); setSaveError(null);
+    try {
+      const { data: d } = await api.get(`/invoices/${id}`);
+      const loaded: FormState = {
+        type:              d.type              ?? "INVOICE",
+        invoiceNumber:     isDuplicate ? ""    : (d.invoiceNumber ?? ""),
+        partnerId:         d.clientId          ?? d.supplierId ?? "",
+        status:            isDuplicate ? "DRAFT" : (d.status ?? "DRAFT"),
+        date:              isDuplicate ? today  : (d.date?.split("T")[0] ?? today),
+        dueDate:           d.dueDate?.split("T")[0]          ?? "",
+        deliveryDate:      d.deliveryDate?.split("T")[0]     ?? "",
+        validUntil:        d.validUntil?.split("T")[0]       ?? "",
+        notes:             d.notes             ?? "",
+        internalNotes:     d.internalNotes     ?? "",
+        globalDiscount:    Number(d.discount   ?? 0),
+        tax:               Number(d.taxRate    ?? 20),
+        isRecurring:       isDuplicate ? false  : (d.isRecurring ?? false),
+        recurringInterval: d.recurringInterval  ?? "MONTHLY",
+        recurringEndDate:  d.recurringEndDate?.split("T")[0] ?? "",
+        parentInvoiceId:   isDuplicate ? ""    : (d.parentInvoiceId ?? ""),
+        items: (d.items ?? []).map((it: any) => ({
+          id:          Math.random().toString(36).slice(2),
+          articleId:   it.articleId,
+          articleName: it.article?.name ?? it.description ?? "",
+          qty:         Number(it.quantity),
+          unitPrice:   Number(it.unitPrice),
+          discount:    Number(it.discount  ?? 0),
+          tax:         Number(it.tax       ?? 20),
+          unit:        it.article?.unit    ?? "",
+        })),
+      };
+      setForm(loaded);
+      if (!isDuplicate) setSnapshot(loaded);
+    } catch {
+      toast.error("Impossible de charger le document");
+    } finally {
+      setLoadingDoc(false);
+    }
+  };
+
+  // ── Numéro automatique (create / duplicate) ───────────────────
+  useEffect(() => {
+    if (!isCreate && !isDuplicate) return;
     setLoadingNum(true);
     api.get(`/invoices/next-number?type=${typeFromUrl}`)
       .then(r => setForm(f => ({ ...f, invoiceNumber: r.data.number })))
-      .catch(() => {}) // silencieux : l'utilisateur peut saisir manuellement
+      .catch(() => {})
       .finally(() => setLoadingNum(false));
-  }, [typeFromUrl]);
+  }, [typeFromUrl, isCreate, isDuplicate]);
+
+  // ── Articles ─────────────────────────────────────────────────
   useEffect(() => {
     setLoadingA(true);
     api.get("/articles")
@@ -233,25 +284,74 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
       .finally(() => setLoadingA(false));
   }, []);
 
-  // ── Chargement partenaires selon type
+  // ── Partenaires ───────────────────────────────────────────────
   useEffect(() => {
     const route = cfg.partnerType === "client" ? "/partners/clients" : "/partners/fournisseurs";
-    setLoadingP(true); setErrorP(null); setPartners([]);
+    setLoadingP(true); setPartners([]);
     api.get(route)
       .then(r => setPartners(r.data?.data ?? r.data))
-      .catch(() => setErrorP("Impossible de charger les partenaires"))
+      .catch(() => toast.error("Impossible de charger les partenaires"))
       .finally(() => setLoadingP(false));
   }, [form.type]);
 
-  // ── State helpers
+  // ── Impression ────────────────────────────────────────────────
+  const handlePrint = (format: PrintFormat) => {
+    setShowPrintMenu(false);
+    const partnerName  = partners.find(p => p.id === form.partnerId)?.name  ?? form.partnerId;
+    const partnerEmail = partners.find(p => p.id === form.partnerId)?.email;
+    const lineTotal    = (it: LineItem) => it.qty * it.unitPrice * (1 - it.discount / 100);
+    const sub   = form.items.reduce((s, it) => s + lineTotal(it), 0);
+    const disc  = sub * (form.globalDiscount / 100);
+    const after = sub - disc;
+    const taxA  = after * (form.tax / 100);
+
+    const data: PrintData = {
+      invoiceNumber:  form.invoiceNumber,
+      type:           cfg.label,
+      date:           form.date,
+      dueDate:        form.dueDate    || undefined,
+      partnerName,
+      partnerEmail,
+      notes:          form.notes      || undefined,
+      subtotal:       sub,
+      discAmt:        disc,
+      taxAmt:         taxA,
+      total:          after + taxA,
+      globalDiscount: form.globalDiscount,
+      tax:            form.tax,
+      companyName:    "Mon Entreprise",
+      companyAddress: "Antananarivo, Madagascar",
+      companyPhone:   "+261 34 00 000 00",
+      companyEmail:   "contact@monentreprise.mg",
+      items: form.items.map(it => ({
+        articleName: it.articleName,
+        qty:         it.qty,
+        unitPrice:   it.unitPrice,
+        discount:    it.discount,
+        tax:         it.tax,
+      })),
+    };
+    printInvoice(data, format);
+  };
+
+  // ── Navigation entre modes (même pattern qu'ArticleForm) ─────
+  const switchMode = (newMode: Mode) => {
+    setShowActionMenu(false);
+    if (!id) return;
+    if (newMode === "edit")      navigate(`/app/facturation/factures/${id}/edit`);
+    else if (newMode === "view") navigate(`/app/facturation/factures/${id}`);
+    else if (newMode === "duplicate") navigate(`/app/facturation/factures/${id}/duplicate`);
+  };
+
+  // ── Helpers state ─────────────────────────────────────────────
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm(f => ({ ...f, [k]: v }));
 
-  const updateItem = useCallback(<K extends keyof LineItem>(id: string, k: K, v: LineItem[K]) =>
-    setForm(f => ({ ...f, items: f.items.map(it => it.id === id ? { ...it, [k]: v } : it) })), []);
+  const updateItem = useCallback(<K extends keyof LineItem>(itemId: string, k: K, v: LineItem[K]) =>
+    setForm(f => ({ ...f, items: f.items.map(it => it.id === itemId ? { ...it, [k]: v } : it) })), []);
 
-  const removeItem = (id: string) =>
-    setForm(f => ({ ...f, items: f.items.filter(it => it.id !== id) }));
+  const removeItem = (itemId: string) =>
+    setForm(f => ({ ...f, items: f.items.filter(it => it.id !== itemId) }));
 
   const pickArticle = useCallback((itemId: string, artId: string) => {
     const art = articles.find(a => a.id === artId);
@@ -263,7 +363,7 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
     )}));
   }, [articles, form.type]);
 
-  // ── Calculs
+  // ── Calculs ───────────────────────────────────────────────────
   const lineTotal = (it: LineItem) => it.qty * it.unitPrice * (1 - it.discount / 100);
   const subtotal  = form.items.reduce((s, it) => s + lineTotal(it), 0);
   const discAmt   = subtotal * (form.globalDiscount / 100);
@@ -271,9 +371,12 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
   const taxAmt    = after * (form.tax / 100);
   const total     = after + taxAmt;
 
-  // ── Sauvegarde
+  // ── Sauvegarde ────────────────────────────────────────────────
   const handleSave = async (asDraft = false) => {
-    setSaving(true); setSaveError(null); setSaveOk(false);
+    if (!form.partnerId) { toast.error("Veuillez sélectionner un partenaire"); return; }
+    if (form.items.some(it => !it.articleId)) { toast.error("Certaines lignes n'ont pas d'article"); return; }
+
+    setSaving(true); setSaveError(null);
     try {
       const isClient = cfg.partnerType === "client";
       const payload = {
@@ -295,54 +398,69 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
         recurringInterval: form.isRecurring ? form.recurringInterval : undefined,
         recurringEndDate:  form.isRecurring && form.recurringEndDate ? form.recurringEndDate : undefined,
         items: form.items.map(it => ({
-          articleId: it.articleId,
-          quantity:  it.qty,
-          unitPrice: it.unitPrice,
-          discount:  it.discount,
-          tax:       it.tax,
+          articleId: it.articleId, quantity: it.qty,
+          unitPrice: it.unitPrice, discount:  it.discount, tax: it.tax,
         })),
       };
-      const res = isCreate
+
+      const isNew = isCreate || isDuplicate;
+      const res   = isNew
         ? await api.post("/invoices", payload)
-        : await api.put(`/invoices/${documentId}`, payload);
-      setSaveOk(true);
-      onSaved?.(res.data);
-      toast.success("Document sauvegardé avec succès!")
-      if (isCreate) setMode("view");
+        : await api.put(`/invoices/${id}`, payload);
+
+      const msg = isDuplicate ? "Document dupliqué !" : isCreate ? "Document créé !" : "Modifications enregistrées !";
+      toast.success(msg);
+
+      if (isNew) {
+        navigate(`/app/facturation/factures/${res.data.id}`);
+      } else {
+        const updated = { ...form, status: asDraft ? "DRAFT" as DocStatus : form.status };
+        setSnapshot(updated); setForm(updated);
+        navigate(`/app/facturation/factures/${id}`);
+      }
     } catch (e: any) {
-      setSaveError(e.response?.data?.error ?? e.message ?? "Erreur lors de la sauvegarde");
-      toast.error(e.response?.data?.error ?? e.message ?? "Erreur lors de la sauvegarde")
+      const msg = e.response?.data?.error ?? e.message ?? "Erreur lors de la sauvegarde";
+      setSaveError(msg); toast.error(msg);
     } finally { setSaving(false); }
   };
 
+  // ── Changement statut rapide (vue) ────────────────────────────
+  const handleStatusChange = async (newStatus: DocStatus) => {
+    setChangingStatus(true);
+    try {
+      await api.patch(`/invoices/${id}/status`, { status: newStatus });
+      setForm(f => ({ ...f, status: newStatus }));
+      setSnapshot(s => s ? { ...s, status: newStatus } : s);
+      toast.success(`Statut : ${STATUS_CFG[newStatus].label}`);
+    } catch (e: any) {
+      toast.error(e.response?.data?.error ?? "Impossible de changer le statut");
+    } finally { setChangingStatus(false); }
+  };
+
   const handleDelete = async () => {
-    if (!confirm("Supprimer ce document ?")) return;
-    try { await api.delete(`/invoices/${documentId}`); onBack?.(); }
-    catch (e: any) { setSaveError(e.response?.data?.error ?? "Erreur"); }
+    if (!id || !confirm("Supprimer ce document définitivement ?")) return;
+    try {
+      await api.delete(`/invoices/${id}`);
+      toast.success("Document supprimé");
+      navigate("/app/facturation/factures");
+    } catch (e: any) { toast.error(e.response?.data?.error ?? "Erreur de suppression"); }
   };
 
   const handleConvert = async (targetType: DocType) => {
     setShowConvertMenu(false);
     try {
-      const res = await api.post(`/invoices/${documentId}/convert`, { targetType });
-      onSaved?.(res.data);
-    } catch (e: any) { setSaveError(e.response?.data?.error ?? "Erreur de conversion"); }
-  };
-
-  const handleDuplicate = async () => {
-    setShowActionMenu(false);
-    try {
-      const res = await api.post(`/invoices/${documentId}/duplicate`, {});
-      onSaved?.(res.data);
-    } catch (e: any) { setSaveError(e.response?.data?.error ?? "Erreur de duplication"); }
+      const res = await api.post(`/invoices/${id}/convert`, { targetType });
+      toast.success(`Converti en ${DOC_CFG[targetType].label}`);
+      navigate(`/app/facturation/factures/${res.data.id}`);
+    } catch (e: any) { toast.error(e.response?.data?.error ?? "Erreur de conversion"); }
   };
 
   const cancelEdit = () => {
     if (snapshot) setForm(snapshot);
-    setMode("view");
+    navigate(`/app/facturation/factures/${id}`);
   };
 
-  // ─────────────────────────────────────────────────────────────
+  // ─── Loading ──────────────────────────────────────────────────
   if (loadingDoc) return (
     <div className="flex items-center justify-center p-20 text-gray-400 gap-3">
       <Loader2 className="w-5 h-5 animate-spin" /> Chargement...
@@ -353,63 +471,106 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
     <div className="h-screen">
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
 
-        {/* ── HEADER ── */}
+        {/* ══ HEADER ══════════════════════════════════════════════ */}
         <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center gap-3">
-            <button onClick={onBack} className="p-1.5 hover:bg-white/70 rounded-lg transition-colors shrink-0">
+
+            <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-white/70 rounded-lg transition-colors shrink-0">
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
+
             <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md shrink-0">
               <FileText className="w-5 h-5 text-white" />
             </div>
+
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base sm:text-xl font-bold text-gray-800">
-                  {isCreate ? `Nouveau — ${cfg.label}` : isView ? (form.invoiceNumber || cfg.label) : `Modifier — ${form.invoiceNumber}`}
-                </h2>
-                {/* Badge type document */}
-                {/* <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.bgColor} ${cfg.color}`}>
-                  {cfg.icon} {cfg.label}
-                </span>
-                {!isCreate && (
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_CFG[form.status].cls}`}>
-                    {STATUS_CFG[form.status].label}
-                  </span>
-                )} */}
-              </div>
-              {/* <p className="text-xs text-gray-500 hidden sm:block">
-                {cfg.partnerType === "client" ? "Vente client" : "Achat fournisseur"}
-              </p> */}
+              <h2 className="text-base sm:text-xl font-bold text-gray-800">
+                {isCreate    && `Nouveau — ${cfg.label}`}
+                {isDuplicate && `Dupliquer — ${cfg.label}`}
+                {mode === "view" && (form.invoiceNumber || cfg.label)}
+                {mode === "edit" && `Modifier — ${form.invoiceNumber}`}
+              </h2>
+              <p className="text-sm text-gray-500 hidden sm:block mt-0.5">
+                {isCreate    && "Créez un nouveau document"}
+                {isDuplicate && "Créez une copie de ce document"}
+                {mode === "view" && form.invoiceNumber && `${cfg.label} • ${form.invoiceNumber}`}
+                {mode === "edit" && "Modifiez les informations du document"}
+              </p>
             </div>
 
+            {/* ── Actions droite ─────────────────────────────── */}
             <div className="flex items-center gap-2 shrink-0">
-              {/* Statut pills — tous visibles (create/edit) */}
-              {!isView && (
-                <div className="hidden sm:flex items-center gap-1 flex-wrap">
-                  {(Object.keys(STATUS_CFG) as DocStatus[]).map(s => (
-                    <button key={s} onClick={() => set("status", s)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-all whitespace-nowrap ${form.status === s ? STATUS_CFG[s].cls + " shadow-sm" : "bg-transparent border-transparent text-gray-400 hover:bg-white/60"}`}>
-                      {STATUS_CFG[s].label}
-                    </button>
-                  ))}
-                </div>
+
+              {/* VUE : badge statut cliquable */}
+              {isView && (
+                changingStatus
+                  ? <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                  : <StatusBadge status={form.status} onChangeTo={handleStatusChange} />
               )}
-              {/* Statut mobile dropdown (create/edit) */}
-              {!isView && (
-                <div className="relative sm:hidden">
-                  <button onClick={() => setShowStatusMenu(v => !v)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${STATUS_CFG[form.status].cls}`}>
-                    {STATUS_CFG[form.status].label}<ChevronDown className="w-3 h-3" />
+
+              {/* CREATE / EDIT : pills statut desktop */}
+              {!isView && !isDuplicate && (
+                <>
+                  <div className="hidden sm:flex items-center gap-1 flex-wrap">
+                    {(Object.keys(STATUS_CFG) as DocStatus[]).map(s => (
+                      <button key={s} onClick={() => set("status", s)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all whitespace-nowrap
+                          ${form.status === s ? STATUS_CFG[s].cls + " shadow-sm" : "bg-transparent border-transparent text-gray-400 hover:bg-white/60"}`}>
+                        {STATUS_CFG[s].label}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Mobile */}
+                  <div className="relative sm:hidden">
+                    <button onClick={() => setShowStatusMenu(v => !v)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${STATUS_CFG[form.status].cls}`}>
+                      {STATUS_CFG[form.status].label}<ChevronDown className="w-3 h-3" />
+                    </button>
+                    {showStatusMenu && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowStatusMenu(false)} />
+                        <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-20">
+                          {(Object.keys(STATUS_CFG) as DocStatus[]).map(s => (
+                            <button key={s} onClick={() => { set("status", s); setShowStatusMenu(false); }}
+                              className="w-full text-left px-4 py-2 text-xs flex items-center gap-2 hover:bg-gray-50">
+                              <span className={`w-2 h-2 rounded-full border ${STATUS_CFG[s].cls}`} />
+                              {STATUS_CFG[s].label}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* VUE : bouton Imprimer */}
+              {isView && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowPrintMenu(v => !v)}
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Imprimer
+                    <ChevronDown className={`w-3 h-3 transition-transform ${showPrintMenu ? "rotate-180" : ""}`} />
                   </button>
-                  {showStatusMenu && (
+                  {showPrintMenu && (
                     <>
-                      <div className="fixed inset-0 z-10" onClick={() => setShowStatusMenu(false)} />
-                      <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-20">
-                        {(Object.keys(STATUS_CFG) as DocStatus[]).map(s => (
-                          <button key={s} onClick={() => { set("status", s); setShowStatusMenu(false); }}
-                            className="w-full text-left px-4 py-2 text-xs flex items-center gap-2 hover:bg-gray-50">
-                            <span className={`w-2 h-2 rounded-full border ${STATUS_CFG[s].cls}`} />
-                            {STATUS_CFG[s].label}
+                      <div className="fixed inset-0 z-10" onClick={() => setShowPrintMenu(false)} />
+                      <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-20">
+                        <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Format d'impression</p>
+                        {([
+                          { format: "A4",     label: "Format A4",     desc: "Facture complète"     },
+                          { format: "A5",     label: "Format A5",     desc: "Version compacte"     },
+                          { format: "TICKET", label: "Ticket caisse", desc: "Imprimante thermique" },
+                        ] as { format: PrintFormat; label: string; desc: string }[]).map(({ format, label, desc }) => (
+                          <button key={format} onClick={() => handlePrint(format)}
+                            className="w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors">
+                            <p className="text-sm font-medium text-gray-700">{label}</p>
+                            <p className="text-xs text-gray-400">{desc}</p>
                           </button>
                         ))}
                       </div>
@@ -418,15 +579,15 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
                 </div>
               )}
 
-              {/* Bouton Modifier (view) */}
+              {/* VUE : bouton Modifier */}
               {isView && canEdit && (
-                <button onClick={() => { setSnapshot(form); setMode("edit"); }}
+                <button onClick={() => switchMode("edit")}
                   className="hidden sm:flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all">
                   <Edit className="w-4 h-4" /> Modifier
                 </button>
               )}
 
-              {/* Transformer (view) */}
+              {/* VUE : Transformer desktop */}
               {isView && cfg.canConvertTo.length > 0 && (
                 <div className="relative hidden sm:block">
                   <button onClick={() => setShowConvertMenu(v => !v)}
@@ -450,7 +611,7 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
                 </div>
               )}
 
-              {/* Menu ··· (view) */}
+              {/* Menu ··· */}
               {isView && (
                 <div className="relative">
                   <button onClick={() => setShowActionMenu(v => !v)} className="p-2 hover:bg-white/50 rounded-lg transition-colors">
@@ -461,12 +622,12 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
                       <div className="fixed inset-0 z-10" onClick={() => setShowActionMenu(false)} />
                       <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-20">
                         {canEdit && (
-                          <button onClick={() => { setSnapshot(form); setMode("edit"); setShowActionMenu(false); }}
+                          <button onClick={() => switchMode("edit")}
                             className="w-full px-4 py-2.5 text-left text-sm hover:bg-blue-50 flex items-center gap-3 sm:hidden">
                             <Edit className="w-4 h-4 text-blue-600" /> Modifier
                           </button>
                         )}
-                        <button onClick={handleDuplicate}
+                        <button onClick={() => switchMode("duplicate")}
                           className="w-full px-4 py-2.5 text-left text-sm hover:bg-purple-50 flex items-center gap-3">
                           <Copy className="w-4 h-4 text-purple-600" /> Dupliquer
                         </button>
@@ -498,7 +659,6 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
             </div>
           </div>
 
-          {/* Lien document parent */}
           {form.parentInvoiceId && (
             <div className="mt-2 ml-12 flex items-center gap-2">
               <span className="text-xs text-gray-400">Créé depuis :</span>
@@ -509,26 +669,17 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
           )}
         </div>
 
-
-
-        {/* ── SECTION 1 : Informations générales ── */}
+        {/* ══ SECTION 1 : Informations générales ══════════════════ */}
         <SectionHeader title="Informations générales" />
         <div className="px-4 sm:px-6 py-4 sm:py-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
 
-          <Field label="Numéro" hint={isCreate ? "Généré automatiquement — modifiable" : undefined}>
-            {isView
-              ? <div className={roCls}>{form.invoiceNumber || "—"}</div>
+          <Field label="Numéro" hint={isCreate || isDuplicate ? "Généré automatiquement — modifiable" : undefined}>
+            {isView ? <div className={roCls}>{form.invoiceNumber || "—"}</div>
               : <div className="relative">
-                  <input
-                    value={form.invoiceNumber}
-                    onChange={e => set("invoiceNumber", e.target.value)}
+                  <input value={form.invoiceNumber} onChange={e => set("invoiceNumber", e.target.value)}
                     placeholder={loadingNum ? "Génération..." : `${cfg.prefix}-2026-0001`}
-                    disabled={loadingNum}
-                    className={iCls}
-                  />
-                  {loadingNum && (
-                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
-                  )}
+                    disabled={loadingNum} className={iCls} />
+                  {loadingNum && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />}
                 </div>
             }
           </Field>
@@ -538,69 +689,63 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
               ? <div className={roCls}>{(partners.find(p => p.id === form.partnerId)?.name ?? form.partnerId) || "—"}</div>
               : loadingP
                 ? <div className={`${iCls} flex items-center gap-2 text-gray-400`}><Loader2 className="w-3.5 h-3.5 animate-spin" />Chargement...</div>
-                : errorP
-                  ? <div className={`${iCls} flex items-center gap-2 text-red-400 border-red-200`}><AlertCircle className="w-3.5 h-3.5" />{errorP}</div>
-                  : <div className="relative">
-                      <select value={form.partnerId} onChange={e => set("partnerId", e.target.value)} className={`${iCls} appearance-none pr-8`}>
-                        <option value="">Sélectionner...</option>
-                        {partners.map(p => <option key={p.id} value={p.id}>{p.name}{p.email ? ` — ${p.email}` : ""}</option>)}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    </div>
+                : <div className="relative">
+                    <select value={form.partnerId} onChange={e => set("partnerId", e.target.value)} className={`${iCls} appearance-none pr-8`}>
+                      <option value="">Sélectionner...</option>
+                      {partners.map(p => <option key={p.id} value={p.id}>{p.name}{p.email ? ` — ${p.email}` : ""}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  </div>
             }
           </Field>
 
           <Field label="Date" required>
-            {isView
-              ? <div className={roCls}>{form.date ? new Date(form.date).toLocaleDateString("fr-FR") : "—"}</div>
+            {isView ? <div className={roCls}>{fmtDate(form.date)}</div>
               : <input type="date" value={form.date} onChange={e => set("date", e.target.value)} className={iCls} />
             }
           </Field>
 
           {cfg.showDue && (
             <Field label="Date d'échéance">
-              {isView
-                ? <div className={roCls}>{form.dueDate ? new Date(form.dueDate).toLocaleDateString("fr-FR") : "—"}</div>
+              {isView ? <div className={roCls}>{fmtDate(form.dueDate)}</div>
                 : <input type="date" value={form.dueDate} onChange={e => set("dueDate", e.target.value)} className={iCls} />
               }
             </Field>
           )}
           {cfg.showDelivery && (
             <Field label="Date de livraison">
-              {isView
-                ? <div className={roCls}>{form.deliveryDate ? new Date(form.deliveryDate).toLocaleDateString("fr-FR") : "—"}</div>
+              {isView ? <div className={roCls}>{fmtDate(form.deliveryDate)}</div>
                 : <input type="date" value={form.deliveryDate} onChange={e => set("deliveryDate", e.target.value)} className={iCls} />
               }
             </Field>
           )}
           {cfg.showValidity && (
             <Field label="Valable jusqu'au" hint="Date d'expiration du devis">
-              {isView
-                ? <div className={roCls}>{form.validUntil ? new Date(form.validUntil).toLocaleDateString("fr-FR") : "—"}</div>
+              {isView ? <div className={roCls}>{fmtDate(form.validUntil)}</div>
                 : <input type="date" value={form.validUntil} onChange={e => set("validUntil", e.target.value)} className={iCls} />
               }
             </Field>
           )}
         </div>
 
-        {/* ── SECTION 2 : Lignes ── */}
+        {/* ══ SECTION 2 : Lignes ══════════════════════════════════ */}
         <SectionHeader title="Lignes du document" />
         <div className="px-4 sm:px-6 py-4 sm:py-5">
+
           {/* Desktop */}
           <div className="hidden md:block border border-gray-200 rounded-xl overflow-hidden">
             <div className="grid bg-gray-50 border-b border-gray-200 px-4 py-2.5"
               style={{ gridTemplateColumns: isView ? "2fr 2fr 60px 110px 70px 70px 110px" : "2fr 2fr 60px 110px 70px 70px 110px 32px" }}>
-              {["Article", "Désignation", "Qté", "Prix unit.", "Rem %", "TVA %", "Total", !isView ? "" : null]
-                .filter(h => h !== null).map((h, i) => (
-                  <span key={i} className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</span>
-              ))}
+              {["Article","Désignation","Qté","Prix unit.","Rem %","TVA %","Total", isView ? null : ""]
+                .filter(h => h !== null)
+                .map((h, i) => <span key={i} className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</span>)}
             </div>
             {form.items.map((it, idx) => (
               <div key={it.id}
                 className={`grid px-4 py-3 items-center gap-2 ${idx < form.items.length - 1 ? "border-b border-gray-100" : ""} ${idx % 2 === 1 ? "bg-gray-50/40" : "bg-white"}`}
                 style={{ gridTemplateColumns: isView ? "2fr 2fr 60px 110px 70px 70px 110px" : "2fr 2fr 60px 110px 70px 70px 110px 32px" }}>
                 {isView
-                  ? <span className="text-xs text-gray-500 truncate">{it.articleId}</span>
+                  ? <span className="text-xs text-gray-500 truncate">{it.articleName || it.articleId}</span>
                   : <div className="relative">
                       <select value={it.articleId} onChange={e => pickArticle(it.id, e.target.value)} disabled={loadingA}
                         className={`${iCls} text-xs appearance-none pr-6`}>
@@ -613,29 +758,25 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
                   ? <span className="text-sm text-gray-800 truncate">{it.articleName}</span>
                   : <input value={it.articleName} placeholder="Désignation" onChange={e => updateItem(it.id, "articleName", e.target.value)} className={`${iCls} text-xs`} />
                 }
-                {isView
-                  ? <span className="text-sm text-center">{it.qty}</span>
+                {isView ? <span className="text-sm text-center">{it.qty}</span>
                   : <input type="number" min={1} value={it.qty} onChange={e => updateItem(it.id, "qty", +e.target.value)} className={`${iCls} text-xs text-center px-1`} />
                 }
-                {isView
-                  ? <span className="text-sm text-right">{fmt(it.unitPrice)}</span>
+                {isView ? <span className="text-sm text-right">{fmt(it.unitPrice)}</span>
                   : <input type="number" min={0} value={it.unitPrice} onChange={e => updateItem(it.id, "unitPrice", +e.target.value)} className={`${iCls} text-xs text-right`} />
                 }
-                {isView
-                  ? <span className="text-sm text-center">{it.discount}%</span>
+                {isView ? <span className="text-sm text-center">{it.discount}%</span>
                   : <div className="flex items-center gap-1">
                       <input type="number" min={0} max={100} value={it.discount} onChange={e => updateItem(it.id, "discount", +e.target.value)} className={`${iCls} text-xs text-right`} style={{ width: "65%" }} />
                       <span className="text-xs text-gray-400">%</span>
                     </div>
                 }
-                {isView
-                  ? <span className="text-sm text-center">{it.tax}%</span>
+                {isView ? <span className="text-sm text-center">{it.tax}%</span>
                   : <div className="flex items-center gap-1">
                       <input type="number" min={0} max={100} value={it.tax} onChange={e => updateItem(it.id, "tax", +e.target.value)} className={`${iCls} text-xs text-right`} style={{ width: "65%" }} />
                       <span className="text-xs text-gray-400">%</span>
                     </div>
                 }
-                <span className="text-sm font-semibold text-gray-800">{fmt(lineTotal(it))} €</span>
+                <span className="text-sm font-semibold text-gray-800">{fmt(lineTotal(it))} Ar</span>
                 {!isView && (
                   <button onClick={() => removeItem(it.id)} className="p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors">
                     <Trash2 className="w-3.5 h-3.5" />
@@ -675,7 +816,7 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
                     </Field>
                 }
                 <div className="grid grid-cols-3 gap-2">
-                  {([["Qté", "qty"], ["Prix unit.", "unitPrice"], ["Remise", "discount"]] as [string, keyof LineItem][]).map(([l, k]) => (
+                  {([["Qté","qty"],["Prix unit.","unitPrice"],["Remise","discount"]] as [string, keyof LineItem][]).map(([l, k]) => (
                     <Field key={k} label={l}>
                       {isView
                         ? <div className={roCls}>{it[k]}{k === "discount" ? "%" : ""}</div>
@@ -686,7 +827,7 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                   <span className="text-xs text-gray-400">TVA {it.tax}%</span>
-                  <span className="font-bold text-blue-600">{fmt(lineTotal(it))} €</span>
+                  <span className="font-bold text-blue-600">{fmt(lineTotal(it))} Ar</span>
                 </div>
               </div>
             ))}
@@ -699,9 +840,10 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
           </div>
         </div>
 
-        {/* ── SECTION 3 : Options + Récap ── */}
+        {/* ══ SECTION 3 : Récap + Options ═════════════════════════ */}
         <SectionHeader title="Récapitulatif et options" />
         <div className="px-4 sm:px-6 py-4 sm:py-5 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+
           {/* Gauche */}
           <div className="space-y-4">
             <Field label="Notes" hint={!isView ? "Visible sur le document imprimé" : undefined}>
@@ -749,15 +891,15 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
                       <div className="grid grid-cols-2 gap-2">
                         {(Object.keys(INTERVALS) as Interval[]).map(iv => (
                           <button key={iv} onClick={() => set("recurringInterval", iv)}
-                            className={`px-2 py-2 rounded-lg text-xs font-medium border transition-all ${form.recurringInterval === iv ? "bg-blue-600 border-blue-600 text-white shadow-sm" : "bg-white border-gray-200 text-gray-600"}`}>
+                            className={`px-2 py-2 rounded-lg text-xs font-medium border transition-all
+                              ${form.recurringInterval === iv ? "bg-blue-600 border-blue-600 text-white shadow-sm" : "bg-white border-gray-200 text-gray-600"}`}>
                             {INTERVALS[iv]}
                           </button>
                         ))}
                       </div>
                     </div>
                     <Field label="Date de fin" hint="Laisser vide pour une récurrence indéfinie">
-                      <input type="date" value={form.recurringEndDate}
-                        onChange={e => set("recurringEndDate", e.target.value)} className={iCls} />
+                      <input type="date" value={form.recurringEndDate} onChange={e => set("recurringEndDate", e.target.value)} className={iCls} />
                     </Field>
                   </div>
                 )}
@@ -769,7 +911,7 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
           <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 sm:p-5 space-y-3 sm:space-y-4">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Sous-total HT</span>
-              <span className="font-medium text-gray-700">{fmt(subtotal)} €</span>
+              <span className="font-medium text-gray-700">{fmt(subtotal)} Ar</span>
             </div>
             <div className="flex flex-wrap justify-between items-center gap-2 text-sm">
               <span className="text-gray-500">Remise globale</span>
@@ -783,26 +925,21 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
                       <span className="px-2 py-1.5 bg-gray-50 border-l border-gray-200 text-xs text-gray-400">%</span>
                     </div>
                 }
-                <span className="text-red-500 text-sm font-medium">−{fmt(discAmt)} €</span>
+                <span className="text-red-500 text-sm font-medium">−{fmt(discAmt)} Ar</span>
               </div>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500">TVA</span>
-              <span className="font-medium text-gray-700">+{fmt(taxAmt)} €</span>
+              <span className="text-gray-500">TVA ({form.tax}%)</span>
+              <span className="font-medium text-gray-700">+{fmt(taxAmt)} Ar</span>
             </div>
             <div className="border-t border-gray-200 pt-3 sm:pt-4 flex justify-between items-center">
               <span className="font-bold text-gray-800">Total TTC</span>
-              <span className="text-xl sm:text-2xl font-bold text-blue-600">{fmt(total)} €</span>
+              <span className="text-xl sm:text-2xl font-bold text-blue-600">{fmt(total)} Ar</span>
             </div>
 
             {saveError && (
               <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
                 <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />{saveError}
-              </div>
-            )}
-            {saveOk && (
-              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700 font-medium">
-                <CheckCircle className="w-3.5 h-3.5" /> Document enregistré avec succès
               </div>
             )}
 
@@ -811,22 +948,25 @@ export default function InvoiceForm({ mode: initMode = "create", documentId, def
                 <button onClick={() => handleSave(false)} disabled={saving}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:opacity-60 text-white text-sm font-semibold rounded-lg shadow-md transition-all">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                  {isCreate ? `Créer le ${cfg.label}` : "Enregistrer les modifications"}
+                  {isCreate    && `Créer le ${cfg.label}`}
+                  {isDuplicate && "Créer la copie"}
+                  {mode === "edit" && "Enregistrer les modifications"}
                 </button>
-                <button onClick={() => handleSave(true)} disabled={saving}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 disabled:opacity-60 text-gray-600 text-sm font-medium rounded-lg border border-gray-200 transition-all">
-                  <Save className="w-4 h-4" /> Enregistrer en brouillon
-                </button>
-                {mode === "edit" && (
-                  <button onClick={cancelEdit}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-400 hover:text-gray-600 text-sm transition-colors">
-                    <XCircle className="w-4 h-4" /> Annuler les modifications
+                {!isDuplicate && (
+                  <button onClick={() => handleSave(true)} disabled={saving}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 disabled:opacity-60 text-gray-600 text-sm font-medium rounded-lg border border-gray-200 transition-all">
+                    <Save className="w-4 h-4" /> Enregistrer en brouillon
                   </button>
                 )}
+                <button onClick={mode === "edit" ? cancelEdit : () => navigate(-1)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-400 hover:text-gray-600 text-sm transition-colors">
+                  <XCircle className="w-4 h-4" /> Annuler
+                </button>
               </div>
             )}
           </div>
         </div>
+
       </div>
     </div>
   );
