@@ -145,7 +145,7 @@ export default function InvoicesPage() {
       <DataTable
         title="Factures"
         description="Gérez vos factures simplement"
-        createButtonColor ="purple"
+        createButtonColor ="createColor"
         createLabel="Créer facture"
         onCreateClick={() => navigate('/app/facturation/factures/new')}
         onRefresh={refresh}

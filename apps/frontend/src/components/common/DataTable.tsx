@@ -263,7 +263,7 @@ export function DataTable<T extends { id: string | number }>({
     title,
     description = '',
     createLabel = 'Créer',
-    createButtonColor = 'blue', // Couleur par défaut
+    createButtonColor = 'createColor', // Couleur par défaut
     onCreateClick,
     onRefresh,
     data,
@@ -427,7 +427,8 @@ export function DataTable<T extends { id: string | number }>({
             info2 : 'bg-info-2 hover:bg-blue-600'
         };
         
-        return colorMap[createButtonColor] || colorMap.blue;
+        // return colorMap[createButtonColor] || colorMap.blue;
+        return createButtonColor
     };
 
     const isAllSelected = data.length > 0 && selectedRows.size === data.length;

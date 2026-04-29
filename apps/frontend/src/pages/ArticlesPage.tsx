@@ -178,7 +178,7 @@ export default function ArticlesPage() {
 
       <DataTable
         title="Articles"
-        createButtonColor ="purple"
+        createButtonColor ="createColor"
         description="Gérez votre catalogue d'articles"
         createLabel="Nouvel article"
         onCreateClick={() => navigate('/app/facturation/articles/new')}

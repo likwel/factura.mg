@@ -268,7 +268,7 @@ export default function PartenairePage({ type }: PartenairePageProps) {
         title={type === 'client' ? 'Clients' : 'Fournisseurs'}
         description={`Gérez vos ${type}s et leurs informations`}
         createLabel={`Nouveau ${type}`}
-        createButtonColor="info2"
+        createButtonColor="createColor"
         onCreateClick={() => navigate(`/app/partenaires/new?type=${type}`)}
         onRefresh={refresh}
 

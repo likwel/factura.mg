@@ -43,15 +43,15 @@ function StatCard({ title, value, icon: Icon, color = 'purple' }: any) {
     <div className={`${theme.bg} ${theme.border} border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <p className={`text-sm font-medium uppercase tracking-wide mb-2 ${theme.text} opacity-70`}>
+          <p className={`text-sm font-medium uppercase tracking-wide mb-2 opacity-70`}>
             {title}
           </p>
-          <p className={`text-2xl font-bold ${theme.text}`}>
+          <p className={`text-2xl font-bold ${theme.text} value-color`}>
             {value}
           </p>
         </div>
         
-        <div className={`${theme.iconBg} ${theme.iconColor} p-3 rounded-xl`}>
+        <div className={`${theme.iconBg} ${theme.iconColor} p-3 rounded-xl dashboard-card value-color`}>
           <Icon className="w-6 h-6" />
         </div>
       </div>
@@ -99,7 +99,11 @@ export default function FacturationDashboard() {
 
   // Données pour le graphique en camembert
   const pieData = [
-    { name: 'Catégorie A', value: 400, color: '#a855f7' },
+    // { name: 'Catégorie A', value: 400, color: '#a855f7' },
+    // { name: 'Catégorie B', value: 300, color: '#60a5fa' },
+    // { name: 'Catégorie C', value: 200, color: '#34d399' },
+
+    { name: 'Catégorie A', value: 400, color: 'var(--main-color)' },
     { name: 'Catégorie B', value: 300, color: '#60a5fa' },
     { name: 'Catégorie C', value: 200, color: '#34d399' },
   ];
@@ -120,7 +124,7 @@ export default function FacturationDashboard() {
           <h1 className="text-2xl font-bold text-gray-800">Tableau de bord</h1>
           <p className="text-gray-600 mt-1">Vue d'ensemble de votre activité</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md">
+        <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg transition-colors shadow-md addBtn">
           <FileText className="w-5 h-5" />
           Générer un rapport
         </button>
@@ -172,10 +176,11 @@ export default function FacturationDashboard() {
             </button>
           </div>
 
+          {/* Courbe */}
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={revenueData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+              <XAxis dataKey="name" stroke="#9ca3af" style={{ fontSize: '12px' }} /> 
               <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
               <Tooltip 
                 contentStyle={{ 
@@ -194,10 +199,10 @@ export default function FacturationDashboard() {
               <Line 
                 type="monotone" 
                 dataKey="value" 
-                stroke="#a855f7" 
+                stroke="var(--main-color)" 
                 strokeWidth={3}
                 fill="url(#colorValue)"
-                dot={{ fill: '#a855f7', r: 4 }}
+                dot={{ fill: 'var(--main-color)', r: 4 }}
                 activeDot={{ r: 6 }}
               />
             </LineChart>

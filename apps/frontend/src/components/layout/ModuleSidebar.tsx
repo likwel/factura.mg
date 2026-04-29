@@ -313,7 +313,7 @@ export default function ModuleSidebar({
                       className={({ isActive }) =>
                         `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all relative flex-1 ${
                           isActive
-                            ? `${colorClasses.bg} ${colorClasses.text} font-medium`
+                            ? `${colorClasses.bg} ${colorClasses.text} font-medium active-menu`
                             : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                         } ${isCollapsed ? 'justify-center' : ''}`
                       }
@@ -321,7 +321,7 @@ export default function ModuleSidebar({
                       {({ isActive }) => (
                         <>
                           {isActive && !isCollapsed && (
-                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${colorClasses.buttonBg} rounded-r-full`}></div>
+                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${colorClasses.buttonBg} rounded-r-full active-border`}></div>
                           )}
                           
                           <Icon className="w-5 h-5 flex-shrink-0" />
@@ -341,7 +341,7 @@ export default function ModuleSidebar({
                     {/* ✅ Bouton d'ajout SORTI du NavLink */}
                     {hasAddButton && !isCollapsed && (
                       <button
-                        className={`p-1 ${colorClasses.buttonBg} ${colorClasses.buttonHover} text-white rounded-md opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-95 flex-shrink-0`}
+                        className={`p-1 addBtn text-white rounded-md opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-95 flex-shrink-0`}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();

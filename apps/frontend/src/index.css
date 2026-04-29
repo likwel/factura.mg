@@ -8,6 +8,7 @@
   --color-primary-500: #3b82f6;
   --color-primary-600: #2563eb;
   --color-primary-700: #1d4ed8;
+  --r: 0.4rem;
 }
 
 .bg-primary{
@@ -64,4 +65,62 @@
 
 .color-primary-2{
   color: #7e22ce;
+}
+
+.rounded-b-0{
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.tabs-custom{
+  background-color: var(--main-bg);
+  width: 100%;
+  z-index: 99;
+}
+.tabs-custom a{
+  font-size: medium;
+  border: 0px solid gray;
+  border-bottom-left-radius: 0px !important;
+  border-bottom-right-radius: 0px !important;
+  border-radius: 0.5rem;
+  background-color: var(--main-bg-primary) !important;
+  opacity: .8;
+  color: white;
+  margin-bottom: 0px !important;
+}
+
+.active-menu, .value-color, .active .icon-color{
+  color: var(--main-color) !important;
+}
+
+.addBtn, .active-border, .createColor {
+  background-color: var(--main-bg);
+}
+
+.addBtn:hover{
+  scale: (1.2);
+}
+.tabs-custom a i{
+  color: white !important;
+}
+
+.tabs-custom a.active{
+  color: black !important;
+  opacity: 1;
+  font-weight: bold !important;
+  margin-left: -0.4rem;
+  margin-right: -0.4rem;
+  background-color: #f6f6fa !important;
+  border-inline: var(--r) solid #0000;
+  border-radius: calc(var(--r) * 2) calc(var(--r) * 2) 0 0 / var(--r);
+  -webkit-mask: radial-gradient(var(--r) at var(--r) 0, #0000 98%, #000 101%) calc(var(--r) * -1) 100% / 100% var(--r) repeat-x, conic-gradient(#000 0 0) padding-box;
+}
+
+.tabs-custom a.active .icon{
+  color: #0ea5e9;
+}
+
+.py-05{
+  padding-top: 0.05rem;
+  padding-bottom: 0.05rem;
 }

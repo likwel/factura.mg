@@ -20,42 +20,67 @@ const modules = [
     name: 'Facturation', 
     path: '/app/facturation',
     icon: FileText,
-    color: 'bg-purple-600'
+    iconPath: '/invoicing.svg',
+    color: 'bg-purple-600',
+    cssColor:'#6466fb',
+    cssBg:'#6466fb',
+    cssBgPrimary :'#4547b3'
+
   },
   { 
     id: 'partenaires', 
     name: 'Partenaires', 
     path: '/app/partenaires',
     icon: Users,
-    color: 'bg-blue-600'
+    iconPath: '/partenaire.svg',
+    color: 'bg-blue-600',
+    cssColor:'#0ea5e9',
+    cssBg:'#0ea5e9',
+    cssBgPrimary :'#1074a7'
   },
   { 
     id: 'inventaire', 
     name: 'Inventaire', 
     path: '/app/inventaire',
     icon: Package,
-    color: 'bg-green-600'
+    iconPath: '/vente.svg',
+    color: 'bg-green-600',
+    cssColor:'#f56b26',
+    cssBg:'#f56b26',
+    cssBgPrimary :'#b44e1d'
   },
   { 
     id: 'comptabilite', 
     name: 'Comptabilité', 
     path: '/app/comptabilite',
     icon: DollarSign,
-    color: 'bg-orange-600'
+    iconPath: '/appoint.svg',
+    color: 'bg-orange-600',
+    cssColor:'#1ab079',
+    cssBg:'#1ab079',
+    cssBgPrimary :'#14815a'
   },
   { 
     id: 'documents', 
     name: 'Documents', 
     path: '/app/documents',
     icon: FileStack,
-    color: 'bg-teal-600'
+    iconPath: '/menu.svg',
+    color: 'bg-teal-600',
+    cssColor:'#15b8a6',
+    cssBg:'#15b8a6',
+    cssBgPrimary :'#108b7e'
   },
   { 
     id: 'parametre', 
     name: 'Paramètre', 
     path: '/app/parametre',
     icon: Settings,
-    color: 'bg-gray-600'
+    iconPath: '/invoicing.svg',
+    color: 'bg-gray-600',
+    cssColor:'#3b82f6',
+    cssBg:'#3b82f6',
+    cssBgPrimary :'#2969ed'
   },
 ];
 
@@ -92,6 +117,17 @@ export default function Header({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+  const currentModule = modules.find(m => m.id === activeModule);
+
+  if (currentModule) {
+    document.body.style.setProperty('--main-color', currentModule.cssColor);
+    document.body.style.setProperty('--main-bg', currentModule.cssBg);
+    document.body.style.setProperty('--main-bg-primary', currentModule.cssBgPrimary);
+  }
+
+}, [activeModule]);
 
   const handleCompanySwitch = async (companyId: string) => {
     if (companyId === currentCompany?.id) {
@@ -137,23 +173,24 @@ export default function Header({
 
   return (
     <>
-      <header className="shadow-lg" style={{ background: navColor, transition: 'background 0.25s ease' }}>
-        <div className="flex items-center justify-between px-4 lg:px-6 py-2 gap-4">
+      <header className="" style={{ background: navColor, transition: 'background 0.25s ease' }}>
+        <div className="flex items-center justify-between px-2 lg:px-2 py-05 gap-4 tabs-custom">
           {/* Navigation Modules */}
-          <nav className="flex items-center gap-1 lg:gap-2 flex-1 overflow-x-auto scrollbar-hide">
+          <nav className="flex items-center gap-2 lg:gap-2 flex-1 pt-2 overflow-x-auto scrollbar-hide">
             {modules.map((module) => (
               <NavLink
                 key={module.id}
                 to={module.path}
                 className={({ isActive }) =>
-                  `flex font-bold no-underline items-center gap-2 px-3 lg:px-4 py-2 rounded-lg text-white transition-all whitespace-nowrap opacity-80 ${
+                  `flex font-bold no-underline items-center gap-2 px-3 lg:px-4 py-1.5 rounded-lg  rounded-b-0 transition-all whitespace-nowrap opacity-80 ${
                     isActive
-                      ? 'bg-white/20 font-semibold shadow-md'
-                      : 'hover:bg-white/10'
+                      ? 'active bg-white shadow-md text-black'
+                      : 'hover:bg-white/10 text-white '
                   }`
                 }
               >
-                <module.icon className="w-5 h-5 flex-shrink-0" />
+                <module.icon className="icon w-5 h-5 flex-shrink-0 icon-color" />
+                {/* <img src={module.iconPath} alt="" color='red'/> */}
                 <span className="hidden md:inline text-sm lg:text-base">{module.name}</span>
               </NavLink>
             ))}
@@ -184,10 +221,10 @@ export default function Header({
             <div className="h-8 w-px bg-white/20"></div>
 
             {/* Company Switcher Dropdown */}
-            <div className="relative" ref={dropdownRef}>
+            <div className="relative company" ref={dropdownRef}>
               <button 
                 onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
-                className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-white/10 hover:bg-white/15 rounded-lg backdrop-blur-sm transition-all group"
+                className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-white/10 hover:bg-white/15 rounded-xl backdrop-blur-sm transition-all group"
                 disabled={isSwitching}
               >
                 {currentCompany.logo ? (
