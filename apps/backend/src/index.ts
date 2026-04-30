@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import path from 'path';
 
 // Routes existantes
 import authRoutes from './controllers/auth.controller';
@@ -24,6 +25,7 @@ import supplierRoutes from './controllers/suppliers.controller';
 import categoryRoutes from './controllers/categories.controller';
 import documentRoutes from './controllers/documents.controller';
 import companyRoutes from './routes/companies.routes';
+import messageRoutes from './routes/message.routes';
 import subscriptionRoutes from './routes/subscription.routes';
 
 // Services
@@ -58,6 +60,8 @@ const io = new Server(httpServer, {
 // ============================================================================
 // MIDDLEWARE
 // ============================================================================
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Security
 app.use(helmet({
@@ -103,6 +107,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/messages', messageRoutes);
 
 // ============================================================================
 // HEALTH CHECK

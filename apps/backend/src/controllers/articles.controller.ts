@@ -18,7 +18,6 @@ router.get('/', authenticate, authorize(Permission.VIEW_ARTICLES), async (req: A
       lowStock,
     } = req.query;
 
-
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;

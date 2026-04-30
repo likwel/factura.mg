@@ -62,7 +62,17 @@ export default function App() {
               <Route path="/dashboard" element={<Navigate to="/app/facturation" replace />} />
               <Route path="/app" element={<Navigate to="/app/facturation" replace />} />
               
+
+              {/* Routes Messages - Toutes utilisent le même composant */}
               <Route path="/app/messages" element={<MessagesDashboard />} />
+              <Route path="/app/messages/inbox" element={<MessagesDashboard />} />
+              <Route path="/app/messages/unread" element={<MessagesDashboard />} />
+              <Route path="/app/messages/starred" element={<MessagesDashboard />} />
+              <Route path="/app/messages/sent" element={<MessagesDashboard />} />
+              <Route path="/app/messages/drafts" element={<MessagesDashboard />} />
+              <Route path="/app/messages/archived" element={<MessagesDashboard />} />
+              <Route path="/app/messages/trash" element={<MessagesDashboard />} />
+
               <Route path="/app/notifications" element={<NotificationsDashboard />} />
 
               {/* MODULE FACTURATION - VIOLET */}

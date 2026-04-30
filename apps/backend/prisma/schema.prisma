@@ -653,24 +653,71 @@ model Notification {
   @@index([createdAt])
 }
 
-model Message {
-  id         String   @id @default(uuid())
-  companyId  String
-  senderId   String
-  receiverId String
-  content    String
-  isRead     Boolean  @default(false)
-  createdAt  DateTime @default(now())
 
-  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+// Enums
+enum MessageStatus {
+  DRAFT      // Brouillon
+  SENT       // Envoyé
+  ARCHIVED   // Archivé
+  TRASH      // Corbeille
+}
+
+enum AttachmentType {
+  IMAGE
+  DOCUMENT
+  FILE
+}
+
+// Modèle Message mis à jour
+model Message {
+  id          String        @id @default(uuid())
+  companyId   String
+  senderId    String
+  receiverId  String?       // Null pour les brouillons non envoyés
+  subject     String
+  content     String        @db.Text
+  status      MessageStatus @default(SENT)
+  isRead      Boolean       @default(false)
+  isImportant Boolean       @default(false)
+  
+  // Dates
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  sentAt      DateTime?     // Date d'envoi (null pour brouillons)
+  trashedAt   DateTime?     // Date de mise à la corbeille
+  
+  // Relations
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sender      User          @relation("SentMessages", fields: [senderId], references: [id])
+  receiver    User?         @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  attachments Attachment[]
 
   @@index([companyId])
   @@index([senderId])
   @@index([receiverId])
+  @@index([status])
   @@index([isRead])
   @@index([createdAt])
+  @@index([isImportant])
+  @@map("messages")
+}
+
+// Nouveau modèle pour les pièces jointes
+model Attachment {
+  id          String         @id @default(uuid())
+  messageId   String
+  fileName    String
+  originalName String
+  fileSize    Int           // Taille en bytes
+  mimeType    String
+  type        AttachmentType
+  url         String        // Chemin ou URL du fichier
+  createdAt   DateTime      @default(now())
+
+  message     Message       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("attachments")
 }
 
 // ==================== AUDIT ====================
